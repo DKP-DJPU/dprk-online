@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Pengisian DPRK Online — PKRK Nasional</title>
+<style>
+  :root{
+    --navy-900:#0F2A45;
+    --navy-800:#15385C;
+    --navy-700:#1A4571;
+    --navy-500:#2C6E9E;
+    --navy-100:#E7EEF5;
+    --bg:#F3F6FA;
+    --surface:#FFFFFF;
+    --border:#DFE6EE;
+    --text:#1B2733;
+    --text-muted:#5C6B7A;
+    --accent:#C9902F;
+    --accent-dark:#A67520;
+    --risk-rendah:#5B9E5E;
+    --risk-menengah-rendah:#8FB86A;
+    --risk-menengah:#E0B341;
+    --risk-menengah-tinggi:#DD8A42;
+    --risk-tinggi:#CF4A42;
+    --radius:12px;
+    --radius-sm:8px;
+    --shadow: 0 1px 2px rgba(15,42,69,0.05), 0 6px 16px rgba(15,42,69,0.07);
+    --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+  }
+  .app{max-width:760px;margin:0 auto;padding:0 0 64px;}
+
+  /* ---------- Topbar ---------- */
+  .topbar{
+    background:linear-gradient(135deg,var(--navy-900),var(--navy-700));
+    color:#fff;
+    padding:22px 20px 0;
+    border-radius:0 0 20px 20px;
+    box-shadow:var(--shadow);
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+  .brand-mark{
+    width:38px;height:38px;flex:none;border-radius:9px;
+    background:rgba(255,255,255,0.12);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand-text .eyebrow{
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(255,255,255,.65);font-weight:600;margin:0 0 2px;
+  }
+  .brand-text h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-0.01em;}
+  .tabs{display:flex;gap:4px;}
+  .tab{
+    flex:1;appearance:none;border:none;background:transparent;
+    color:rgba(255,255,255,.68);font-family:var(--font-display);
+    font-size:14px;font-weight:600;padding:11px 8px 14px;
+    cursor:pointer;border-bottom:2.5px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .tab.active{color:#fff;border-color:var(--accent);}
+  .tab:hover:not(.active){color:rgba(255,255,255,.9);}
+
+  main{padding:20px 16px 0;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow);
+  }
+  .card-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+  .card-step{
+    font-family:var(--font-mono);font-size:12px;font-weight:700;
+    color:var(--navy-500);background:var(--navy-100);
+    border-radius:6px;padding:2px 7px;
+  }
+  .card-head h2{font-size:15px;margin:0;font-weight:700;color:var(--navy-900);}
+  .card-sub{font-size:12.5px;color:var(--text-muted);margin:-8px 0 14px;}
+
+  /* ---------- Form elements ---------- */
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--text-muted);margin:0 0 5px;}
+  .field{margin-bottom:14px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row > .field{flex:1;min-width:0;}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;font-family:var(--font-body);font-size:14.5px;color:var(--text);
+    background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px 11px;transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  textarea{resize:vertical;min-height:64px;}
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:var(--navy-500);
+    box-shadow:0 0 0 3px rgba(44,110,158,0.15);
+  }
+  .hint{font-size:11.5px;color:var(--text-muted);margin-top:4px;}
+
+  /* ---------- Combobox bandara ---------- */
+  .combobox{position:relative;}
+  .combobox-results{
+    position:absolute;left:0;right:0;top:calc(100% + 4px);
+    background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+    box-shadow:var(--shadow);max-height:240px;overflow-y:auto;z-index:20;display:none;
+  }
+  .combobox-results.open{display:block;}
+  .combobox-item{padding:9px 12px;cursor:pointer;font-size:13.5px;border-bottom:1px solid var(--bg);}
+  .combobox-item:last-child{border-bottom:none;}
+  .combobox-item:hover,.combobox-item.hl{background:var(--navy-100);}
+  .combobox-item b{color:var(--navy-800);}
+  .combobox-item span{color:var(--text-muted);font-size:12px;}
+  .selected-chip{
+    display:none;align-items:center;justify-content:space-between;gap:8px;
+    background:var(--navy-100);border:1.5px solid var(--navy-500);
+    border-radius:var(--radius-sm);padding:9px 12px;font-size:13.5px;margin-top:8px;
+  }
+  .selected-chip.show{display:flex;}
+  .selected-chip button{
+    appearance:none;border:none;background:transparent;color:var(--navy-700);
+    font-weight:700;cursor:pointer;font-size:13px;
+  }
+
+  /* ---------- Risk grid (Ancaman/Kerentanan/Konsekuensi) ---------- */
+  .risk-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .risk-col{
+    background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px;
+  }
+  .risk-col-title{font-size:11.5px;font-weight:700;color:var(--navy-800);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  .risk-col input, .risk-col select{padding:8px;font-size:13.5px;margin-bottom:6px;}
+
+  /* ---------- Gauge (signature element) ---------- */
+  .gauge-wrap{margin:16px 0 4px;}
+  .gauge-readout{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+  .gauge-readout .val{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--navy-900);}
+  .gauge-readout .val small{font-size:13px;font-weight:600;color:var(--text-muted);font-family:var(--font-body);}
+  .gauge-badge{
+    font-family:var(--font-display);font-size:12.5px;font-weight:700;
+    padding:5px 12px;border-radius:999px;color:#fff;
+    transition:background-color .2s ease;
+  }
+  .gauge-track{
+    position:relative;height:10px;border-radius:999px;overflow:hidden;
+    display:flex;background:var(--border);
+  }
+  .gauge-seg{height:100%;}
+  .gauge-marker{
+    position:absolute;top:-4px;width:2px;height:18px;background:var(--navy-900);
+    border-radius:2px;transform:translateX(-1px);transition:left .2s ease;
+    box-shadow:0 0 0 3px rgba(15,42,69,0.15);
+  }
+  .gauge-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:5px;font-family:var(--font-mono);}
+  .penerimaan-line{
+    margin-top:12px;font-size:12.5px;color:var(--text-muted);
+    display:flex;justify-content:space-between;align-items:center;
+    border-top:1px dashed var(--border);padding-top:12px;
+  }
+  .penerimaan-line b{color:var(--navy-900);}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    appearance:none;border:none;border-radius:var(--radius-sm);
+    font-family:var(--font-display);font-weight:700;font-size:14px;
+    padding:12px 18px;cursor:pointer;transition:filter .15s ease, transform .05s ease;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-primary:disabled{background:#C9C2B4;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--navy-700);border:1.5px solid var(--border);}
+  .btn-ghost:hover{background:var(--navy-100);}
+  .btn-sm{padding:8px 12px;font-size:12.5px;}
+  .btn-row{display:flex;gap:10px;margin-top:16px;}
+  .btn-row .btn-primary{flex:2;}
+  .btn-row .btn-ghost{flex:1;}
+  .rekap-toolbar .btn{flex:none;white-space:nowrap;}
+
+  /* ---------- Session list ---------- */
+  .session-item{
+    display:flex;gap:10px;align-items:flex-start;padding:11px 0;
+    border-bottom:1px solid var(--bg);
+  }
+  .session-item:last-child{border-bottom:none;}
+  .session-badge{
+    flex:none;width:9px;height:9px;border-radius:999px;margin-top:5px;
+  }
+  .session-item .si-title{font-size:13.5px;font-weight:600;color:var(--navy-900);}
+  .session-item .si-sub{font-size:12px;color:var(--text-muted);margin-top:1px;}
+  .empty-state{
+    text-align:center;padding:26px 12px;color:var(--text-muted);font-size:13px;
+  }
+  .empty-state .es-mark{font-size:26px;margin-bottom:6px;}
+
+  /* ---------- Rekap view ---------- */
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+  .stat-box{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px;text-align:center;box-shadow:var(--shadow);
+  }
+  .stat-box .num{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--navy-900);}
+  .stat-box .lbl{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+  .rekap-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .rekap-toolbar select, .rekap-toolbar input{flex:1;min-width:120px;}
+  .rekap-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  table.rekap{border-collapse:collapse;width:100%;font-size:12.5px;min-width:640px;}
+  table.rekap th{
+    background:var(--navy-100);color:var(--navy-900);text-align:left;
+    padding:9px 10px;font-weight:700;position:sticky;top:0;white-space:nowrap;
+  }
+  table.rekap td{padding:9px 10px;border-top:1px solid var(--bg);vertical-align:top;}
+  table.rekap tr:hover td{background:var(--bg);}
+  .chip-risk{
+    display:inline-block;padding:3px 9px;border-radius:999px;color:#fff;
+    font-size:11px;font-weight:700;white-space:nowrap;
+  }
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);
+    background:var(--navy-900);color:#fff;padding:12px 18px;border-radius:999px;
+    font-size:13.5px;font-weight:600;box-shadow:var(--shadow);opacity:0;
+    pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:100;
+    display:flex;align-items:center;gap:8px;max-width:88%;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+  #toast.error{background:var(--risk-tinggi);}
+
+  .spinner{
+    width:15px;height:15px;border-radius:50%;
+    border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;
+    animation:spin .7s linear infinite;flex:none;
+  }
+  .spinner.dark{border:2px solid rgba(15,42,69,0.18);border-top-color:var(--navy-700);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media (max-width:480px){
+    .risk-grid{grid-template-columns:1fr;}
+    .field-row{flex-direction:column;gap:0;}
+    .stats-row{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7v2l10 3 10-3V7L12 2z" fill="#fff" opacity="0.9"/>
+          <path d="M12 12v10M8 22h8" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <p class="eyebrow">PKRK Nasional</p>
+        <h1>Sistem Pengisian DPRK Online</h1>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="input" type="button">Isi Data</button>
+      <button class="tab" data-tab="rekap" type="button">Rekap &amp; Ekspor</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- ======================= VIEW: INPUT ======================= -->
+    <section id="view-input" class="view active">
+
+      <div class="card" id="card-identitas">
+        <div class="card-head"><span class="card-step">1</span><h2>Identitas Bandar Udara</h2></div>
+        <p class="card-sub">Pilih bandara Anda &mdash; hanya perlu diisi sekali per sesi.</p>
+
+        <div class="field">
+          <label for="bandara-search">Bandar Udara</label>
+          <div class="combobox">
+            <input type="text" id="bandara-search" placeholder="Ketik nama bandara atau kota&hellip;" autocomplete="off">
+            <div class="combobox-results" id="bandara-results"></div>
+          </div>
+          <div class="selected-chip" id="bandara-chip">
+            <span id="bandara-chip-text"></span>
+            <button type="button" id="bandara-chip-clear">Ganti</button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="bulan">Bulan Penilaian</label>
+            <select id="bulan"></select>
+          </div>
+          <div class="field">
+            <label for="tahun">Tahun</label>
+            <input type="number" id="tahun" value="2026" min="2024" max="2035">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="nama-pengisi">Nama Pengisi</label>
+            <input type="text" id="nama-pengisi" placeholder="Nama lengkap">
+          </div>
+          <div class="field">
+            <label for="jabatan-pengisi">Jabatan</label>
+            <input type="text" id="jabatan-pengisi" placeholder="mis. Airport Security Manager">
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="card-skenario">
+        <div class="card-head"><span class="card-step">2</span><h2>Skenario Risiko</h2></div>
+        <p class="card-sub">Isi satu skenario ancaman spesifik. Setelah disimpan, form akan kosong lagi untuk skenario berikutnya.</p>
+
+        <div class="field">
+          <label for="kategori">Kategori Ancaman</label>
+          <select id="kategori"></select>
+        </div>
+        <div class="field">
+          <label for="id-risk">Skenario Ancaman (dari Katalog Resmi)</label>
+          <select id="id-risk" disabled></select>
+          <p class="hint" id="id-risk-hint">Pilih kategori ancaman dahulu untuk melihat daftar skenario.</p>
+        </div>
+        <div class="field">
+          <label for="skenario">Skenario Ancaman / Metode Serangan <span id="skenario-mode" style="font-weight:400;color:var(--text-muted);"></span></label>
+          <textarea id="skenario" placeholder="Uraikan skenario ancaman secara spesifik&hellip;"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="area">Area / Lokasi</label>
+            <input type="text" id="area" placeholder="mis. Sisi Darat, PSCP, SSCP">
+          </div>
+        </div>
+        <div class="field">
+          <label for="langkah-saat-ini">Langkah Keamanan Saat Ini</label>
+          <textarea id="langkah-saat-ini" placeholder="Kontrol/prosedur keamanan yang sudah berjalan&hellip;"></textarea>
+        </div>
+        <div class="field">
+          <label for="kerentanan-saat-ini">Kerentanan Saat Ini</label>
+          <textarea id="kerentanan-saat-ini" placeholder="Celah/kelemahan yang masih ada&hellip;"></textarea>
+        </div>
+
+        <div class="risk-grid">
+          <div class="risk-col">
+            <div class="risk-col-title">Ancaman</div>
+            <input type="number" id="ancaman-nilai" min="1" max="10" placeholder="Nilai 1&ndash;10">
+            <select id="ancaman-rating"></select>
+          </div>
+          <div class="risk-col">
+            <div class="risk-col-title">Kerentanan</div>
+            <input type="number" id="kerentanan-nilai" min="1" max="10" placeholder="Nilai 1&ndash;10">
+            <select id="kerentanan-rating"></select>
+          </div>
+          <div class="risk-col">
+            <div class="risk-col-title">Konsekuensi</div>
+            <input type="number" id="konsekuensi-nilai" min="1" max="10" placeholder="Nilai 1&ndash;10">
+            <select id="konsekuensi-rating"></select>
+          </div>
+        </div>
+
+        <div class="gauge-wrap">
+          <div class="gauge-readout">
+            <div class="val"><span id="risiko-nilai">&mdash;</span> <small>/ 30 total risiko</small></div>
+            <div class="gauge-badge" id="risiko-badge" style="background:var(--border);color:var(--text-muted);">Belum lengkap</div>
+          </div>
+          <div class="gauge-track" id="gauge-track"></div>
+          <div class="gauge-scale"><span>3</span><span>30</span></div>
+          <div class="penerimaan-line">
+            <span>Kategori Penerimaan Risiko</span>
+            <b id="penerimaan-text">&mdash;</b>
+          </div>
+        </div>
+
+        <div class="field-row" style="margin-top:16px;">
+          <div class="field">
+            <label for="perlakuan">Perlakuan Risiko</label>
+            <select id="perlakuan"></select>
+          </div>
+          <div class="field">
+            <label for="prioritas">Prioritas Penanganan</label>
+            <select id="prioritas"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="langkah-tambahan">Langkah Keamanan Tambahan (Rencana)</label>
+          <textarea id="langkah-tambahan" placeholder="Rencana mitigasi tambahan&hellip;"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="pemilik-risiko">Pemilik Risiko (Risk Owner)</label>
+            <input type="text" id="pemilik-risiko" placeholder="mis. Airport Security Manager">
+          </div>
+          <div class="field">
+            <label for="tanggal-kaji">Tanggal Kaji Ulang</label>
+            <input type="date" id="tanggal-kaji">
+          </div>
+        </div>
+        <div class="field">
+          <label for="keterangan">Keterangan</label>
+          <textarea id="keterangan" placeholder="Catatan tambahan (opsional)"></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-simpan" type="button">Simpan Skenario Ini</button>
+          <button class="btn btn-ghost" id="btn-reset" type="button">Bersihkan</button>
+        </div>
+      </div>
+
+      <div class="card" id="card-sesi">
+        <div class="card-head"><span class="card-step">3</span><h2>Skenario Tersimpan Sesi Ini</h2></div>
+        <div id="session-list">
+          <div class="empty-state">
+            <div class="es-mark">&#128203;</div>
+            Belum ada skenario yang disimpan pada sesi ini.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= VIEW: REKAP ======================= -->
+    <section id="view-rekap" class="view">
+      <div class="stats-row">
+        <div class="stat-box"><div class="num" id="stat-total">&mdash;</div><div class="lbl">Total Skenario</div></div>
+        <div class="stat-box"><div class="num" id="stat-bandara">&mdash;</div><div class="lbl">Bandara Mengisi</div></div>
+        <div class="stat-box"><div class="num" id="stat-tinggi">&mdash;</div><div class="lbl">Tak Dpt Ditoleransi</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Data Terkumpul</h2></div>
+        <div class="rekap-toolbar">
+          <input type="text" id="rekap-filter-text" placeholder="Cari bandara / skenario&hellip;">
+          <select id="rekap-filter-rating">
+            <option value="">Semua Rating</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btn-refresh-rekap" type="button">Muat Ulang</button>
+          <button class="btn btn-primary btn-sm" id="btn-export" type="button" style="flex:none;">Ekspor .xlsx</button>
+        </div>
+        <div class="rekap-table-wrap">
+          <table class="rekap">
+            <thead>
+              <tr>
+                <th>Bandara</th><th>Kategori</th><th>Skenario</th><th>Risiko</th>
+                <th>Perlakuan</th><th>Pengisi</th><th>Disimpan</th>
+              </tr>
+            </thead>
+            <tbody id="rekap-tbody">
+              <tr><td colspan="7" class="empty-state">Klik &ldquo;Muat Ulang&rdquo; untuk mengambil data.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  /* =====================================================================
+     KONFIGURASI BACKEND GOOGLE SHEETS
+     Tempel URL Web App hasil deploy Google Apps Script Anda di sini.
+     Contoh: "https://script.google.com/macros/s/AKfycb.../exec"
+     ===================================================================== */
+  var GAS_URL = "PASTE_URhttps://script.google.com/macros/library/d/1-vvVvvcx74nznWTCgvwMJsHE8YcxXuvdYKQ8y5EcHJXdAYcAx6kOp-M3/1L_WEB_APP_ANDA_DI_SINI";
+
+  function gasReady(){
+    return GAS_URL && GAS_URL.indexOf("https://script.google.com/") === 0;
+  }
+  "use strict";
+
+  /* ---------- Data acuan ---------- */
+  var AIRPORTS = [["001", "A.A. Bere Tallo", "Atambua", "ABU", "G"], ["002", "Abdul Haris Nasution", "Mandailing Natal", "JHN", "G"], ["003", "Abdul Rachman Saleh", "Malang", "MLG", "F"], ["004", "Aboy", "Pegunungan Bintang", "ABY", ""], ["005", "Aboyaga", "Dogiyai", "", ""], ["006", "Abresso", "Manokwari Selatan", "RSK", ""], ["007", "Achmad Yani", "Semarang", "SRG", "C"], ["008", "Adau Airstrip", "Nunukan", "", ""], ["009", "Adi Soemarmo", "Solo", "SOC", "C"], ["010", "Adisutjipto", "Yogyakarta", "JOG", "C"], ["011", "Aek Godang", "Padang Sidempuan", "AEG", "G"], ["012", "Akimuga", "Akimuga", "WABC", "H"], ["013", "Alama", "Mimika", "", "H"], ["014", "Alas Lauser", "Kutacane", "LSR", "H"], ["015", "Amahai", "Pulau Seram", "AHI", "H"], ["016", "Amman Mineral Poto Tano", "Sumbawa Barat", "PNW", "H"], ["017", "Andi Jemma", "Masamba", "MXB", "H"], ["018", "Anggi", "Anggi", "AGD", ""], ["019", "Apalapsili", "Yalimo", "AAS", ""], ["020", "APT. Pranoto", "Samarinda", "AAP", "C"], ["021", "Aroanop", "Mimika", "", "H"], ["022", "Arung Palakka", "Bone", "ARP", "H"], ["023", "Atung Bungsu", "Dempo Selatan", "PXA", "H"], ["024", "Ayawasi", "Ayawasi", "AYW", "H"], ["025", "Babo", "Kab. Teluk Bintuni", "BXB", "G"], ["026", "Bade", "Bade", "BXD", "H"], ["027", "Bandaneira", "Pulau Banda", "NDA", "H"], ["028", "Banyuwangi", "Banyuwangi", "BWX", "C"], ["029", "Batom", "Batom", "BXM", "H"], ["030", "Beoga", "Beoga Barat", "", ""], ["031", "Bersujud Batu Licin", "Tanah Bumbu", "BTW", "G"], ["032", "Betoambari", "Bau-Bau", "BUW", "G"], ["033", "Bilai", "Intan Jaya", "", ""], ["034", "Bilorai", "Kab. Intan Jaya", "UGU", "G"], ["035", "Binaka", "Gunung Sitoli", "GNS", "F"], ["036", "Bintuni", "Bintuni", "NTI", "H"], ["037", "Binuang", "Nunukan", "", ""], ["038", "Blangkejeren", "Gayo Lues", "GYO", "H"], ["039", "Bokondini", "Bokondini", "BUI", "H"], ["040", "Bolaang Mongondow", "Bolaang Mongondow", "LKM", "H"], ["041", "Bomakia", "Bomakia", "BXG", "H"], ["042", "Borome", "Pegunungan Bintang", "", ""], ["043", "Budiarto", "Tanggerang", "BTO", "H"], ["044", "Buli", "Maba", "WUB", "G"], ["045", "Cakrabhuwana", "Cirebon", "CBN", "H"], ["046", "Cut Nyak Dhien", "Nagan Raya", "MEQ", "G"], ["047", "Dabo", "Singkep", "SIQ", "G"], ["048", "Dabra", "Dabra", "DRH", "H"], ["049", "Datah Dawai", "Datah Dawai", "DTD", "H"], ["050", "David Constantijn Saudale", "Rote", "RTI", "G"], ["051", "Depati Amir", "Pangkal Pinang", "PGK", "E"], ["052", "Depati Parbo", "Kerinci", "KRC", "G"], ["053", "Dewadaru", "Karimun Jawa, Kab. Jepara", "KWB", "H"], ["054", "Dhoho", "Kediri", "DHX", "C"], ["055", "Dirung - Puruk Cahu", "Murung Raya", "", "H"], ["056", "Djalaluddin", "Gorontalo", "GTO", "F"], ["057", "Dobo", "Pulau Aru, Kep. Arusi", "DOB", "G"], ["058", "Dofa Benjina Falabisahaya", "Mangole", "MAL", "H"], ["059", "Domine Eduard Osok", "Sorong", "SOQ", "C"], ["060", "Douw Aturure", "Nabire", "NBX", "F"], ["061", "Dr. Ferdinand Lumban Tobing", "Sibolga", "FLZ", "G"], ["062", "El Tari", "Kupang", "KOE", "C"], ["063", "Elelim", "Kab. Yalimo", "ELR", "G"], ["064", "Emalamo", "Sanana", "SQN", "G"], ["065", "Enarotali", "Enarotali", "EWI", "H"], ["066", "Enggano", "Bengkulu Utara", "ENG", "H"], ["067", "Ewer", "Ewer", "EWE", "G"], ["068", "Fatmawati Soekarno", "Padang Kemiling", "BKS", "F"], ["069", "Fawi", "Puncak Jaya", "", ""], ["070", "Frans Kaisiepo", "Biak", "BIK", "C"], ["071", "Frans Sales Lega", "Ruteng", "RTG", "G"], ["072", "Frans Seda", "Maumere", "MOF", "F"], ["073", "Gamarmalamo", "Galela", "GLX", "F"], ["074", "Gatot Soebroto", "Way Kanan", "WYK", "H"], ["075", "Gebe", "Halmahera Utara", "GEB", "H"], ["076", "Gewayantana", "Larantuka", "LKA", "H"], ["077", "Gusti Syamsir Alam", "Kotabaru", "KBU", "G"], ["078", "H. Aroeppala", "Selayar", "KSR", "G"], ["079", "H. Asan", "Sampit", "SMQ", "G"], ["080", "H. Hasan Aroeboesman", "Ende", "ENE", "G"], ["081", "H.A.S. Hanandjoeddin", "Tanjung Pandan", "TJQ", "C"], ["082", "Haji Muhammad Sidik", "Muara Teweh", "HMS", "H"], ["083", "Halim Perdanakusuma", "Jakarta", "HLP", "C"], ["084", "Haluoleo", "Kendari", "KDI", "E"], ["085", "Hang Nadim", "Batam", "BTH", "C"], ["086", "Harun Thohir", "Gresik", "BXW", "H"], ["087", "Husein Sastranegara", "Bandung", "BDO", "H"], ["088", "Ibu Kota Nusantara", "Penajam Paser Utara", "", "C"], ["089", "Ilaga", "Ilaga", "ILA", "H"], ["090", "Ilu", "Ilu", "IUL", "H"], ["091", "IMIP", "Morowali", "MWS", "H"], ["092", "Inanwatan", "Inanwatan", "INX", "H"], ["093", "Iskandar", "Pangkalan Bun", "PKN", "F"], ["094", "Japura", "Rengat", "RGT", "H"], ["095", "Jenderal Besar Soedirman", "Purbalingga", "PWL", "H"], ["096", "Jila", "Mimika", "", "H"], ["097", "Jita", "Mimika", "", "H"], ["098", "John Becker", "Pulau Kisar", "JBE", "H"], ["099", "Jos Orno Imsula", "Moa", "JOE", "G"], ["100", "Juanda", "Surabaya", "SUB", "B"], ["101", "Juwata", "Tarakan", "TRK", "C"], ["102", "Kabare", "Kabare", "KBE", ""], ["103", "Kabir", "Tidak tersedia", "", "H"], ["104", "Kalimarau", "Tanjung Redeb", "BEJ", "E"], ["105", "Kambuaya", "Kambuaya", "KBX", "H"], ["106", "Kamur", "Kamur", "KCD", "H"], ["107", "Kapiraya", "Deiyai", "", "H"], ["108", "Karel Sadsuitubun", "Langgur", "LUV", "G"], ["109", "Karubaga", "Karubaga", "KBF", "H"], ["110", "Kasiguncu", "Poso", "PSJ", "G"], ["111", "Kebar", "Kebar", "KEQ", "H"], ["112", "Kebo", "Paniai", "", ""], ["113", "Kelila", "Mamberamo Tengah", "LLN", ""], ["114", "Kenyam", "Nduga", "", ""], ["115", "Kepi", "Kab. Mappi", "KEI", "H"], ["116", "Kertajati", "Majalengka", "KJT", "C"], ["117", "Kimaam", "Kimaam", "KMM", "H"], ["118", "Kiwirok", "Kiwirok", "WAJK", "H"], ["119", "Kobakma", "Mamberamo Tengah", "", ""], ["120", "Kokonau", "Kokonau", "KOX", "H"], ["121", "Kol. Robert Atty Bessing", "Malinau", "LNU", "H"], ["122", "Komodo", "Labuan Bajo", "LBJ", "C"], ["123", "Koroway Batu", "Boven Digoel", "", ""], ["124", "Kuabang", "Kao", "KAZ", "G"], ["125", "Kuala Batu", "Blang Pidie", "KJX", "H"], ["126", "Kuala Kurun", "Kuala Kurun", "KLG", "H"], ["127", "Kuala Pembuang", "Kotawaringin Timur", "KLP", "H"], ["128", "Kualanamu", "Medan", "KNO", "B"], ["129", "Kufar", "Kufar", "KFR", "G"], ["130", "Lagaligo (BUA)", "Palopo", "LLO", "G"], ["131", "Larat", "Tanimbar Utara", "LRT", "H"], ["132", "Lasikin", "Sinabang", "LKI", "G"], ["133", "Lasondre", "Pulau-Pulau Batu", "LSE", "G"], ["134", "Letung", "Kepulauan Anambas", "LMU", "G"], ["135", "LNG Badak", "Bontang", "BXT", "G"], ["136", "Lombok International Airport (BIL)", "Praya", "LOP", "C"], ["137", "Long Apung", "Malinau", "LPU", "G"], ["138", "Long Apung", "Long Apung", "LPU", ""], ["139", "Maimun Saleh", "Sabang", "SBG", "H"], ["140", "Mali", "Alor", "ARD", "G"], ["141", "Malikussaleh", "Lhokseumawe", "LSW", "G"], ["142", "Malinau Robert Atty Bessing", "Malinau", "LNU", "H"], ["143", "Mararena", "Sarmi", "MRF", ""], ["144", "Maratua", "Berau", "RTU", ""], ["145", "Maratua", "Berau", "RTU", "H"], ["146", "Marimoi", "Kobok", "MRM", "H"], ["147", "Marinda/Waisai", "Waisai", "RJM", "H"], ["148", "Matahora (Wakatobi)", "Wangi-Wangi", "WNI", "G"], ["149", "Matak", "Kep. Anambas", "MWK", "G"], ["150", "Mathilda Batlayeri", "Saumlaki", "SXK", "G"], ["151", "Maulana Prins Mandapar", "Banggai Laut", "BQR", "H"], ["152", "Melak", "Sendawar", "MLK", "G"], ["153", "Melonguane", "Sangihe Talaud", "MNA", "G"], ["154", "mentawai", "Sipora", "RKI", "H"], ["155", "Merdey", "Merdey", "RDE", "H"], ["156", "Miangas", "Tidak tersedia", "MKF", "H"], ["157", "Minangkabau", "Padang", "PDG", "C"], ["158", "Mindiptana", "Kab. Boven Digoel", "OMD", "H"], ["159", "Moanamani", "Moanamani", "ONI", "H"], ["160", "Molof", "Keerom", "", ""], ["161", "Mopah", "Merauke", "MKQ", "C"], ["162", "Morowali", "Morowali", "MOH", "G"], ["163", "Mozes Kilangin", "Timika", "TIM", "F"], ["164", "Muara Bungo", "Muaro Bungo", "BUU", "G"], ["165", "Muara Wahau", "Kutai Timur", "", "H"], ["166", "Mugi", "Nduga", "", ""], ["167", "Muhammad Taufiq Kiemas", "Kab, Pesisir barat", "KXI", "H"], ["168", "Muko-Muko", "Muko-Muko", "MPC", "H"], ["169", "Mulia", "Kab. Puncak Jaya", "OHI", "H"], ["170", "Mutiara", "Palu", "PLW", "C"], ["171", "Naha", "Tahuna", "NAH", "G"], ["172", "Namlea", "Pulau Buru", "NAM", "G"], ["173", "Namrole", "Pulau Buru", "NRE", "G"], ["174", "Nanga Pinoh", "Nanga Pinoh", "NPO", "H"], ["175", "Ngloram", "Blora", "CPF", "H"], ["176", "Ngurah Rai", "Bali (Denpasar)", "DPS", "A"], ["177", "Notohadinegoro", "Jember", "JBB", "G"], ["178", "Numfor", "Biak", "FOO", "H"], ["179", "Nunukan", "Nunukan", "NNX", "G"], ["180", "Nusawiru", "Ciamis", "CJN", "H"], ["181", "Oesman Sadik", "Labuha", "LAH", "G"], ["182", "Okaba", "Okaba", "OKQ", "H"], ["183", "Oksibil", "Oksibil", "OKL", "H"], ["184", "Pagerungan", "Sumenep", "", ""], ["185", "Pangsuma", "Putussibau", "PSU", "G"], ["186", "Panua Pohuwato", "Pohuwato", "PWX", "G"], ["187", "Paro", "Nduga", "", ""], ["188", "Pasir Pangaraian", "Pasir Pangaraian", "PPR", ""], ["189", "Pattimura", "Ambon", "AMQ", "C"], ["190", "Pinang Kampai", "Dumai", "DUM", "G"], ["191", "Pitu", "Morotai", "OTI", "G"], ["192", "Pogogul", "Buol", "UOL", "G"], ["193", "Pondok Cabe", "Tanggerang Selatan", "PCB", "G"], ["194", "Potowaiburu", "Mimika", "", "H"], ["195", "Pusako Anak Nagari", "Pasaman Barat", "", "H"], ["196", "Radin Inten II", "Tanjung Karang (Bandar Lampung)", "TKG", "C"], ["197", "Rahadi Oesman", "Ketapang", "KTG", "F"], ["198", "Raja Haji Abdullah", "Tanjung Balai Karimun", "TJB", "H"], ["199", "Raja Haji Fisabilillah", "Tanjung Pinang", "TNJ", "C"], ["200", "Raja Sisingamangaraja XII", "Siborong-Borong", "DTB", "C"], ["201", "Rampi", "Rampi", "RMP", "H"], ["202", "Ranai", "Natuna", "NTX", "G"], ["203", "Rembele", "Takengon", "TXE", "G"], ["204", "Rendani", "Manokwari", "MKW", "E"], ["205", "Sam Ratulangi", "Manado", "MDC", "C"], ["206", "Sanggu", "Buntok", "SGQ", "H"], ["207", "Sangia Nibandera", "Kolaka", "SQR", "G"], ["208", "Seko", "Luwu Utara", "SKO", "H"], ["209", "Senggeh", "Senggeh", "SEH", "H"], ["210", "Senggo", "Senggo", "ZEG", "H"], ["211", "Sentani", "Jayapura", "DJJ", "C"], ["212", "Sepinggan", "Balikpapan", "BPN", "C"], ["213", "Sibisa", "Kab. Toba", "SIW", "H"], ["214", "Siboru", "Fak-Fak", "FKQ", "G"], ["215", "Silampari", "Lubuk Linggau", "LLJ", "G"], ["216", "Sinak", "Puncak Jaya", "NKD", "H"], ["217", "Singkawang", "Singkawang", "SKJ", "G"], ["218", "Sitaro", "Kep. Siau", "", "H"], ["219", "Smart Semelagi", "Sambas", "", ""], ["220", "Soa", "Bajawa", "BJW", "G"], ["221", "Sobaham", "Mamberamo Raya", "", ""], ["222", "Soekarno-Hatta", "Cengkareng (Jakarta)", "CGK", "A"], ["223", "Sorowako", "Luwu Timur", "SQR", ""], ["224", "Stevanus Rumbewas", "Serui", "ZRI", "G"], ["225", "Sugimanuru", "Muna", "RAQ", "G"], ["226", "Sultan Babullah", "Ternate", "TTE", "F"], ["227", "Sultan Bantilan", "Toli-Toli", "TLI", "G"], ["228", "Sultan Hasanuddin", "Makassar", "UPG", "C"], ["229", "Sultan Iskandar Muda", "Banda Aceh", "BTJ", "C"], ["230", "Sultan Mahmud Badaruddin II", "Palembang", "PLM", "C"], ["231", "Sultan Muhammad Kaharuddin", "Sumbawa Besar", "SWQ", "G"], ["232", "Sultan Muhammad Salahuddin", "Bima", "BMU", "F"], ["233", "Sultan Syarif Haroen Setia Negara", "Pelalawan", "RPL", "H"], ["234", "Sultan Syarif Kasim II", "Pekanbaru", "PKU", "C"], ["235", "Sultan Thaha", "Jambi", "DJB", "E"], ["236", "Sumarorong", "Mamasa", "", "H"], ["237", "Supadio", "Pontianak", "PNK", "C"], ["238", "Syamsudin Noor", "Banjarmasin", "BDJ", "C"], ["239", "Syekh Hamzah Fansury", "Singkil", "WIMI", "H"], ["240", "Syukuran Aminuddin Amir", "Luwuk", "LUW", "F"], ["241", "Taive", "Tolikara", "", ""], ["242", "Tambelan", "Bintan", "TBX", "H"], ["243", "Tambolaka", "Waikabubak", "TMC", "G"], ["244", "Tampa Padang", "Mamuju", "MJU", "G"], ["245", "Tanah Merah", "Tanah Merah", "TMH", "H"], ["246", "Tanjung Api Ampana", "Ampana", "OJU", "G"], ["247", "Tanjung Bara", "Kutai Timur", "TJC", "G"], ["248", "Tanjung Harapan", "Tanjung Selor", "TJS", "G"], ["249", "Tanjung Warukin", "Tanjung", "TJG", "H"], ["250", "Tardamu", "Sabu", "SAU", "H"], ["251", "Tebelian", "Sintang", "SQG", "G"], ["252", "Teminabuan", "Teminabuan", "TXM", "H"], ["253", "Tempuling", "Indragiri Hilir", "", ""], ["254", "Teraplu", "Pengunungan Bintang", "", ""], ["255", "Teuku Cut Ali", "Tapak Tuan", "TPK", "H"], ["256", "Tiom", "Tiom", "TIO", "H"], ["257", "Tjilik Riwut", "Palangkaraya", "PKY", "F"], ["258", "Toraja", "Tana Toraja", "TRT", "G"], ["259", "Torea", "Fak-Fak", "", "G"], ["260", "Towe Hitam", "Keerom", "", ""], ["261", "Trunojoyo", "Sumenep", "SUP", "G"], ["262", "Tsingga", "Tsingga", "", "H"], ["263", "Tuanku Tambusai", "Rokan Hulu", "PPR", "H"], ["264", "Tumbang Samba", "Kaltingan", "TBM", "H"], ["265", "Tunggul Wulung", "Cilacap", "CXP", "H"], ["266", "Umbu Mehang Kunda", "Waingapu", "WGP", "G"], ["267", "Utarom", "Kaimana", "KNG", "G"], ["268", "Waghte", "Waghte", "WET", "H"], ["269", "Wahai", "Pulau Seram", "WBA", "H"], ["270", "Wamena", "Wamena", "WMX", "F"], ["271", "Wangbe", "Wangbe", "", ""], ["272", "Wasior", "Wasior", "WSR", "G"], ["273", "Weda Bay", "Weda Bay", "WED", "G"], ["274", "Werur", "Werur", "WRR", ""], ["275", "Wiriadinata", "Tasikmalaya", "TSY", "G"], ["276", "Wonopito", "Lewoleba", "LWE", "G"], ["277", "Yakuhimo/Nop Goliat Dekai", "Dekai", "DEK", "G"], ["278", "Yaniruma", "Boven Digoel", "", ""], ["279", "Yogyakarta International Airport", "Kulon Progo", "YIA", "C"], ["280", "Yunuf", "Keerom", "", ""], ["281", "Yuvai Semaring", "Long Bawan", "LBW", "G"]]; /* [id, nama, kota, iata, kelas] x 281 */
+  var CATALOG = [["01.01", "01", "Teroris menyamar sebagai penumpang melakukan bom bunuh diri dengan meletakkan IED di badan dengan bahan peledak berbahan logam/metalic berbentuk padat dengan target pesawat udara", "PSCP", "Bandar Udara"], ["01.02", "01", "Teroris menyamar sebagai penumpang difasilitasi oleh staf (insider threat) melakukan bom bunuh diri dengan meletakkan IED di badan dengan bahan peledak berbahan logam/metalic berbentuk padat dengan target pesawat udara", "SSCP", "Bandar Udara"], ["01.03", "01", "Teroris menyamar sebagai penumpang melakukan bom bunuh diri dengan meletakkan di badan bahan peledak berbahan LNMC (Low-Non Metal Component) berbentuk padat dengan target pesawat udara", "PSCP", "Bandar Udara"], ["01.04", "01", "Teroris menyamar sebagai penumpang difasilitasi oleh staf (insider threat) melakukan bom bunuh diri dengan meletakkan IED di badan berbahan LNMC (Low-Non Metal Component) berbentuk padat dengan target pesawat udara", "SSCP", "Bandar Udara"], ["01.05", "01", "Teroris menyamar sebagai penumpang menyelundupkan IED di dalam bagasi kabin berbahan logam/metalic berbentuk padat yang dimodifikasi peralatan elektronik dan elektromekanik dengan target pesawat udara", "PSCP", "Bandar Udara"], ["01.06", "01", "Teroris menyamar sebagai penumpang difasilitasi oleh staf (insider threat) menyelundupkan IED di dalam bagasi kabin berbahan logam/metalic berbentuk padat yang dimodifikasi peralatan elektronik dan elektromekanik dengan target pesawat udara", "SSCP", "Bandar Udara"], ["01.07", "01", "Teroris menyamar sebagai penumpang menyelundupkan IED di dalam bagasi kabin berbahan LNMC (Low-Non Metal Component) berbentuk padat yang dimodifikasi peralatan elektronik dan elektromekanik dengan target pesawat udara", "PSCP", "Bandar Udara"], ["01.08", "01", "Teroris menyamar sebagai penumpang difasilitasi oleh staf (insider threat) menyelundupkan IED di dalam bagasi kabin berbahan LNMC (Low-Non Metal Component) berbentuk padat yang dimodifikasi peralatan elektronik dan elektromekanik dengan target pesawat udara", "SSCP", "Bandar Udara"], ["01.09", "01", "Teroris menyamar sebagai penumpang menyelundupkan bom cair (liquid bomb) di dalam bagasi kabin dengan target pesawat udara", "PSCP", "Bandar Udara"], ["01.10", "01", "Teroris menyamar sebagai penumpang difasilitasi oleh staf (insider threat) menyelundupkan bom cair (liquid bomb) di dalam bagasi kabin dengan target pesawat udara", "SSCP", "Bandar Udara"], ["01.11", "01", "Teroris menyamar sebagai penumpang meninggalkan IED yang diselundupkan pada bagasi kabin di kabin pesawat udara", "Pesawat udara", "Airlines"], ["01.12", "01", "Teroris menyamar sebagai petugas cleaning pesawat menyisipkan IED pada peralatan pembersih untuk menyerang pesawat", "SSCP, pesawat udara", "SSCP: Bandar Udara; Pesawat Udara: Airlines"], ["02.01", "02", "Pengirim (shipper) menyelundupkan IED pada kargo dengan target pesawat udara", "Area pemeriksaan kargo", "RA, Jaster"], ["02.02", "02", "Staf kargo (insider threat) menyisipkan IED pada kargo dengan target pesawat udara", "Area pemeriksaan orang", "RA, Jaster"], ["02.03", "02", "Porter menyusupkan IED pada kargo dengan target pesawat udara", "Pesawat udara", "Airlines"], ["03.01", "03", "Teroris melakukan serangan menggunakan drone ke pesawat udara", "Jalur take off - landing pesawat", "Bandar Udara"], ["03.02", "03", "Serangan drone yang diperlengkapi IED ke pesawat udara", "Jalur take off - landing pesawat", "Bandar Udara"], ["03.03", "03", "Drone melepaskan CBR (Chemical, Biological and Radiological) ke area publik", "Sisi darat", "Bandar Udara"], ["03.04", "03", "Serangan drone dilengkapi bahan peledak ke pesawat udara yang ada di darat (ground) atau serangan ke bandar udara", "Area parkir pesawat", "Bandar Udara"], ["03.05", "03", "Teroris menerbangkan drone di area bandar udara untuk mengganggu operasional bandar udara", "Area Bandar Udara", "Bandar Udara"], ["03.06", "03", "Drone menjadi sarana untuk membawa barang yang membahayakan ke daerah keamanan terbatas", "Daerah Keamanan Terbatas", "Bandar Udara"], ["03.07", "03", "Drone dipergunakan sebagai alat untuk mengawasi daerah yang sensitif", "Daerah Keamanan Terbatas", "Bandar Udara"], ["04.01", "04", "Serangan teroris menggunakan bom kendaraan di area parkir kendaraan untuk melumpuhkan operasional di bandar udara untuk mendapatkan perhatian dari pemerintah dan media massa", "Area parkir kendaraan", "Bandar Udara"], ["04.02", "04", "Serangan teroris menggunakan bom kendaraan yang diparkir di area drop zone/pick up zone", "Drop zone, pick up zone, fasilitas penghubung antar moda", "Bandar Udara"], ["04.03", "04", "Serangan teroris menggunakan bom rakitan yang disisipkan di koper (barang bawaan) untuk menyerang orang/penumpang", "Lobby kedatangan, Lobby keberangkatan", "Bandar Udara"], ["04.04", "04", "Serangan teroris menggunakan senjata untuk menyerang orang/penumpang", "Lobby kedatangan, Lobby keberangkatan", "Bandar Udara"], ["04.05", "04", "Serangan teroris menggunakan bom kendaraan dengan menabrakkan kendaraan ke gedung terminal", "Lobby kedatangan, Lobby keberangkatan", "Bandar Udara"], ["04.06", "04", "Serangan teroris menggunakan bom rakitan yang disisipkan di koper (barang bawaan) untuk menyerang orang/penumpang", "Fasilitas jasa terkait penunjang dan memberi nilai tambah", "Bandar Udara"], ["04.07", "04", "Serangan teroris menggunakan senjata untuk menyerang orang/penumpang", "Fasilitas jasa terkait penunjang dan memberi nilai tambah", "Bandar Udara"], ["04.08", "04", "Serangan teroris menggunakan bom kendaraan di area parkir kendaraan gedung kargo", "Area depan terminal kargo", "Bandar Udara"], ["04.09", "04", "Serangan teroris menggunakan bom kendaraan dengan menabrakkan kendaraan ke Gedung Kargo", "Area depan terminal kargo", "Bandar Udara"], ["04.10", "04", "Teroris menyamar sebagai penumpang menggunakan bom rakitan yang disisipkan di koper (barang bawaan) untuk menyerang orang/penumpang", "Area lapor diri (check in area)", "Bandar Udara, Airlines"], ["04.11", "04", "Teroris menyamar sebagai penumpang menggunakan bom rakitan yang disisipkan di badan untuk menyerang orang/penumpang", "Area lapor diri (check in area)", "Bandar Udara, Airlines"], ["04.12", "04", "Teroris menyamar sebagai penumpang menggunakan senjata untuk menyerang orang/penumpang", "Area lapor diri (check in area)", "Bandar Udara, Airlines"], ["05.01", "05", "Pesawat udara dipergunakan sebagai senjata oleh awak pesawat atau cabin crew", "Pesawat Udara", "Airlines"], ["05.02", "05", "Pesawat udara dipergunakan sebagai senjata dan dikomandokan dengan senjata/IED", "Pesawat Udara", "Airlines"], ["05.03", "05", "Pesawat udara dipergunakan sebagai senjata dengan pengambilalihan (theft)", "Area parkir pesawat", "Airlines"], ["06.01", "06", "Bahan kimia disebarkan secara terbuka atau tertutup/secara terus menerus atau sesekali/pada lokasi yang terisolir atau padat", "Area lapor diri (check in area)", "Bandar Udara"], ["07.01", "07", "Teroris melakukan serangan MANPADS ke pesawat udara", "Daerah KKOP", "Bandar Udara"], ["07.02", "07", "Teroris melakukan serangan MANPADS ke bandar udara", "Daerah KKOP", "Bandar Udara"], ["07.03", "07", "Teroris melakukan serangan roket/granat/mortir ke pesawat udara", "Daerah KKOP", "Bandar Udara"], ["07.04", "07", "Teroris melakukan serangan roket/granat/mortir ke bandar udara", "Daerah KKOP", "Bandar Udara"], ["07.05", "07", "Teroris melemparkan IED ke pesawat udara dari perimeter", "Pagar perimeter", "Bandar Udara"], ["07.06", "07", "Teroris melemparkan IED ke area bandar udara dari perimeter", "Pagar perimeter", "Bandar Udara"], ["08.01", "08", "Teroris menyamar sebagai penumpang menyembunyikan IED pada bagasi tercatat dengan target pesawat udara", "HBSCP, Area lapor diri (check in area)", "HBSC: Bandar Udara; Area lapor diri: Airlines"], ["08.02", "08", "Orang selain penumpang (insider threat) menyusupkan bom rakitan (IED) ke dalam bagasi tercatat", "Make up area, perjalanan ke pesawat, pesawat udara", "Airlines"], ["09.01", "09", "IED disembunyikan oleh staf (insider threat) pada barang perbekalan pesawat udara (in flight supplies) dengan target pesawat udara", "Perusahaan barang perbekalan pesawat udara, pesawat", "Airlines"], ["09.02", "09", "IED disembunyikan oleh staf (insider threat) pada peralatan pembersih (cleaning supplies) dengan target pesawat udara", "Pesawat Udara", "Airlines"], ["09.03", "09", "IED disembunyikan oleh staf (insider threat) pada katering (catering) dengan target pesawat udara", "Perusahaan catering, pesawat", "Airlines"], ["10.01", "10", "VBIED diparkir dekat fasilitas bandar udara di sisi udara (misal: fuel farm)", "ASCP", "Bandar Udara"], ["10.02", "10", "VBIED ditabrakkan ke fasilitas bandar udara di sisi udara (misal: fuel farm)", "ASCP", "Bandar Udara"], ["10.03", "10", "VBIED dalam bentuk padat (solid) atau cair (liquid) diledakkan di sisi udara", "ASCP", "Bandar Udara"], ["10.04", "10", "Teroris menggunakan bom kendaraan pada kendaraan untuk menyerang pesawat udara", "ASCP, Area pengendapan kendaraan pengangkut penumpang di sisi udara", "Bandar Udara, Airlines"], ["10.05", "10", "VBIED diledakkan di dekat pesawat udara dari luar bandara", "Pagar perimeter", "Bandar Udara"], ["10.06", "10", "Teroris menyisipkan bom pada kendaraan Ambulance (kendaraan darurat) untuk menyerang pesawat udara", "ASCP", "Bandar Udara"], ["10.07", "10", "Kendaraan operasional di sisi udara sengaja menabrak pesawat udara di DKT", "Sisi udara", "Bandar Udara"], ["10.08", "10", "Kendaraan operasional sengaja menabrak pesawat udara dari luar bandara", "Pagar perimeter", "Bandar Udara"], ["10.09", "10", "Serangan ke pesawat udara di sisi udara menggunakan VBIED yang difasilitasi oleh staf (insider threat)", "SSCP", "Bandar Udara"], ["11.01", "11", "Serangan siber ke sistem elektronik yang bersifat kritis terhadap keselamatan penerbangan", "Data dan SEP", "Airlines, LPPNPI"], ["11.02", "11", "Serangan siber ke sistem elektronik yang bersifat kritis terhadap keamanan penerbangan", "Data dan SEP", "Bandar Udara, RA, Jaster"], ["11.03", "11", "Serangan siber ke sistem elektronik yang bersifat kritis terhadap fasilitas bandar udara", "Data dan SEP", "Airlines, Bandar Udara, Imigrasi, Bea Cukai"], ["11.04", "11", "Serangan siber ke sistem elektronik penerbangan yang bersifat kritis yang difasilitasi oleh staf (insider threat) atau pihak ketiga", "Data dan SEP", "Airlines, Bandar Udara, RA, Jaster, Imigrasi, Bea Cukai"], ["12.01", "12", "Pembajakan terhadap pesawat udara oleh teroris", "Pesawat Udara", "Airlines, Bandar Udara"], ["12.02", "12", "Pembajakan terhadap pesawat udara oleh teroris yang difasilitasi oleh staf (insider threat)", "Pesawat Udara", "Airlines"], ["12.03", "12", "Pembajakan terhadap kendaraan regulated agent yang mengangkut kargo dan pos ke gudang kargo", "Kendaraan kargo dan POS RA", "Regulated Agent"], ["13.01", "13", "Menyebarkan bahan biologi ke area bandara", "Publik area", "Bandar Udara"], ["13.02", "13", "Menyebarkan bahan radioaktif melalui Radiological Dispersal Device (RDD) di area terisolir atau tempat yang ramai", "Publik area", "Bandar Udara"], ["14.01", "14", "Penyampaian informasi palsu (candaan bom) di dalam pesawat udara", "Pesawat Udara", "Airlines"], ["14.02", "14", "Penyampaian informasi palsu (candaan bom) di area publik, area DKT dan area steril", "Bandar Udara", "Bandar Udara"], ["15.01", "15", "VBIED diparkir dekat gedung Fasilitas Pemandu Lalu Lintas Penerbangan (Air Traffic Control/ATC)", "Area pemeriksaan kendaraan", "LPPNPI"], ["15.02", "15", "VBIED ditabrakkan ke gedung Fasilitas Pemandu Lalu Lintas Penerbangan (Air Traffic Control/ATC)", "Area pemeriksaan kendaraan", "LPPNPI"], ["16.01", "16", "Sabotase terhadap power supply bandar udara", "Area power supply", "Bandar Udara"], ["16.02", "16", "Sabotase terhadap water house bandar udara", "Area water house", "Bandar Udara"], ["16.03", "16", "Sabotase terhadap sistem telekomunikasi bandar udara", "Area sistem telekomunikasi", "Bandar Udara"], ["16.04", "16", "Sabotase terhadap sistem elektronika bandar udara (denial of service/importation of false data)", "Area sistem elektronika", "Bandar Udara"], ["17.01", "17", "Pesawat udara dipergunakan sebagai senjata dengan pengambilalihan (theft)", "Pesawat udara", "Airlines"], ["17.02", "17", "Unruly passenger pada saat terbang", "Pesawat udara", "Airlines"], ["18.01", "18", "IED disembunyikan oleh staf (insider threat) di barang yang diperjualbelikan di dalam pesawat udara", "Perusahaan penyedia perbekalan pesawat udara", "Airlines"], ["18.02", "18", "IED disembunyikan oleh staf (insider threat) pada peralatan pembersih (cleaning supplies) dengan target pesawat udara", "Pesawat udara", "Airlines"], ["19.01", "19", "Serangan bersenjata ke pesawat udara dengan menggunakan senjata api/pisau", "Area Bandar Udara", "Bandar Udara, Airlines"], ["19.02", "19", "Serangan bersenjata ke pesawat udara dengan menggunakan pisau kecil", "Security Check Point", "Bandar Udara"], ["19.03", "19", "Serangan bersenjata ke pesawat udara dengan menggunakan pisau non logam", "Security Check Point", "Bandar Udara"], ["19.04", "19", "Penyebaran berita palsu (hoax)", "", "Bandar Udara"], ["19.05", "19", "Pengrusakan terminal oleh orang umum sebagai perluasan aksi protes/demonstrasi", "Terminal", "Bandar Udara"], ["19.06", "19", "Serangan terhadap pesawat udara yang mendarat dan penyanderaan terhadap pilot/penumpang sebagai aksi protes", "Sisi Udara", "Bandar Udara, Airlines"], ["19.07", "19", "Huru hara/pengumpulan massa di area bandar udara", "Area sisi darat", "Bandar Udara"], ["19.08", "19", "Penyelundupan barang-barang ilegal (narkoba, hewan yang dilindungi, senjata, dan lain-lain)", "Akses kontrol", "Bandar Udara, RA, Jaster, LPPNPI"], ["19.09", "19", "Penyusupan orang melalui perimeter", "Pagar perimeter", "Bandar Udara"], ["19.10", "19", "Pelanggaran akses ke sisi udara", "Boarding gate", "Airlines"], ["19.11", "19", "Pemalsuan pas bandara", "Akses kontrol", "Bandar Udara"], ["19.12", "19", "Pemalsuan dokumen perjalanan", "Akses kontrol", "Bandar Udara, Airlines"], ["19.13", "19", "Pencurian/pendodosan", "Make up area, pesawat udara", "Airlines"]];   /* [id_risk, kategori_kode, skenario_ancaman, area_kerentanan, pemilik_risiko] x 92, dari Pedoman Teknis PR 41/2024 */
+  var MANUAL_VALUE = "MANUAL";
+
+  var KATEGORI = [
+    ["01","Person Borne IEDs (Bom Bunuh Diri) - on the body or in cabin baggage"],
+    ["02","Bom Kargo (IEDs in Cargo)"],
+    ["03","Attacks Using UAS/RPAS (Penyerangan Sistem Pesawat Kendali Jarak Jauh)"],
+    ["04","Landside Attack (Ancaman di Daerah Sisi Darat)"],
+    ["05","Aircraft as a Weapon (Pemanfaatan Pesawat Udara sebagai Senjata)"],
+    ["06","Chemical Threats (Ancaman Serangan Kimia)"],
+    ["07","MANPADS (Serangan Sistem Senjata Pertahanan Udara Portable)"],
+    ["08","IED in Hold Baggage (Penyusupan Bom di Bagasi Tercatat)"],
+    ["09","IED in Catering (Penyusupan Bom/Senjata dalam Kiriman Katering)"],
+    ["10","Vehicle-Borne IEDs / Bom Mobil"],
+    ["11","Cyber-Attack (Serangan Siber)"],
+    ["12","Hijack (Pembajakan)"],
+    ["13","Biological and Radiological Threats"],
+    ["14","Hoaxes (Informasi Palsu)"],
+    ["15","Attack on ATC Facility"],
+    ["16","Sabotage (Sabotase)"],
+    ["17","Airborne Threats"],
+    ["18","IED in Other Services"],
+    ["19","Other Attacks (Sumber Serangan Lainnya)"]
+  ];
+  var BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  var RATING_KUALITATIF = ["Rendah","Menengah-Rendah","Menengah","Menengah-Tinggi","Tinggi"];
+  var PERLAKUAN = ["Diterima (Acceptance)","Mitigasi (Mitigation)","Penolakan (Avoidance)","Pembagian (Sharing)"];
+  var PRIORITAS = ["Sangat Segera","Segera","Biasa"];
+
+  var RISK_BANDS = [
+    {min:3,  max:7,  label:"Rendah",           color:"#5B9E5E"},
+    {min:8,  max:13, label:"Menengah-Rendah",  color:"#8FB86A"},
+    {min:14, max:19, label:"Menengah",         color:"#E0B341"},
+    {min:20, max:25, label:"Menengah-Tinggi",  color:"#DD8A42"},
+    {min:26, max:30, label:"Tinggi",           color:"#CF4A42"}
+  ];
+  var PENERIMAAN_MAP = {
+    "Tinggi":"Tidak dapat ditoleransi",
+    "Menengah-Tinggi":"Tidak dapat ditoleransi",
+    "Menengah":"ALARP (serendah mungkin yang dapat dicapai)",
+    "Menengah-Rendah":"Dapat ditoleransi",
+    "Rendah":"Dapat ditoleransi"
+  };
+  function bandColor(label){
+    for(var i=0;i<RISK_BANDS.length;i++){ if(RISK_BANDS[i].label===label) return RISK_BANDS[i].color; }
+    return "#999";
+  }
+
+  /* ---------- State ---------- */
+  var selectedAirport = null;
+  var sessionEntries = [];
+  var allSubmissionsCache = [];
+
+  /* ---------- Helpers ---------- */
+  function $(sel){ return document.querySelector(sel); }
+  function $all(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function escapeHtml(s){
+    return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function tdText(text){
+    var td = document.createElement("td");
+    td.textContent = (text===undefined||text===null||text==="") ? "-" : text;
+    return td;
+  }
+  function fillSimpleSelect(select, items, placeholder){
+    select.innerHTML = "";
+    var p = document.createElement("option");
+    p.value=""; p.textContent = placeholder || "Pilih..."; select.appendChild(p);
+    items.forEach(function(txt){
+      var o = document.createElement("option");
+      o.value = txt; o.textContent = txt;
+      select.appendChild(o);
+    });
+  }
+  function fillKategoriSelect(select){
+    select.innerHTML = "";
+    var p = document.createElement("option");
+    p.value=""; p.textContent = "Pilih kategori ancaman..."; select.appendChild(p);
+    KATEGORI.forEach(function(k){
+      var o = document.createElement("option");
+      o.value = k[0] + " - " + k[1];
+      o.textContent = k[0] + " — " + k[1];
+      select.appendChild(o);
+    });
+  }
+  function populateIdRiskSelect(kategoriKode){
+    var sel = $("#id-risk");
+    var hint = $("#id-risk-hint");
+    sel.innerHTML = "";
+    if(!kategoriKode){
+      sel.disabled = true;
+      var ph = document.createElement("option");
+      ph.value=""; ph.textContent="Pilih kategori ancaman dahulu...";
+      sel.appendChild(ph);
+      hint.textContent = "Pilih kategori ancaman dahulu untuk melihat daftar skenario.";
+      return;
+    }
+    sel.disabled = false;
+    var ph2 = document.createElement("option");
+    ph2.value=""; ph2.textContent="Pilih skenario...";
+    sel.appendChild(ph2);
+    var matches = CATALOG.filter(function(c){ return c[1] === kategoriKode; });
+    matches.forEach(function(c){
+      var o = document.createElement("option");
+      o.value = c[0];
+      var short = c[2].length > 90 ? (c[2].slice(0,90) + "…") : c[2];
+      o.textContent = c[0] + " — " + short;
+      sel.appendChild(o);
+    });
+    var manualOpt = document.createElement("option");
+    manualOpt.value = MANUAL_VALUE;
+    manualOpt.textContent = "+ Skenario Baru (isi manual, belum ada di katalog)";
+    sel.appendChild(manualOpt);
+    hint.textContent = matches.length + " skenario tersedia dari katalog resmi untuk kategori ini.";
+  }
+  function applyIdRiskSelection(){
+    var idr = $("#id-risk").value;
+    var skenario = $("#skenario");
+    var area = $("#area");
+    var pemilik = $("#pemilik-risiko");
+    var modeLabel = $("#skenario-mode");
+    if(!idr){
+      modeLabel.textContent = "";
+      return;
+    }
+    if(idr === MANUAL_VALUE){
+      skenario.value = "";
+      area.value = "";
+      skenario.readOnly = false;
+      skenario.focus();
+      modeLabel.textContent = "(isi manual)";
+      return;
+    }
+    var entry = CATALOG.find(function(c){ return c[0] === idr; });
+    if(entry){
+      skenario.value = entry[2];
+      area.value = entry[3];
+      if(!pemilik.value) pemilik.value = entry[4];
+      skenario.readOnly = false;
+      modeLabel.textContent = "(dari katalog — boleh disesuaikan)";
+    }
+  }
+  var toastTimer = null;
+  function showToast(msg, isError){
+    var t = $("#toast");
+    t.textContent = msg;
+    t.className = "show" + (isError ? " error" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.className = ""; }, 3200);
+  }
+
+  /* ---------- Combobox Bandara ---------- */
+  function renderResults(query){
+    var resultsBox = $("#bandara-results");
+    var q = query.trim().toLowerCase();
+    if(q.length < 1){ resultsBox.classList.remove("open"); resultsBox.innerHTML=""; return; }
+    var matches = AIRPORTS.filter(function(a){
+      return a[1].toLowerCase().indexOf(q) > -1 ||
+             a[2].toLowerCase().indexOf(q) > -1 ||
+             (a[3] && a[3].toLowerCase().indexOf(q) > -1);
+    }).slice(0, 30);
+    resultsBox.innerHTML = "";
+    if(matches.length === 0){
+      var none = document.createElement("div");
+      none.className = "combobox-item";
+      none.style.color = "var(--text-muted)";
+      none.textContent = "Tidak ditemukan. Coba kata kunci lain.";
+      resultsBox.appendChild(none);
+      resultsBox.classList.add("open");
+      return;
+    }
+    matches.forEach(function(a){
+      var div = document.createElement("div");
+      div.className = "combobox-item";
+      div.innerHTML = "<b>" + escapeHtml(a[1]) + "</b><br><span>" + escapeHtml(a[2]) +
+        (a[3] ? (" • " + escapeHtml(a[3])) : "") + (a[4] ? (" • Kelas " + escapeHtml(a[4])) : "") + "</span>";
+      div.addEventListener("click", function(){ selectAirport(a); });
+      resultsBox.appendChild(div);
+    });
+    resultsBox.classList.add("open");
+  }
+  function selectAirport(a){
+    selectedAirport = {id:a[0], nama:a[1], kota:a[2], iata:a[3], kelas:a[4]};
+    $("#bandara-chip-text").textContent = a[1] + (a[3] ? (" (" + a[3] + ")") : "") + " — " + a[2];
+    $("#bandara-chip").classList.add("show");
+    var input = $("#bandara-search");
+    input.value = ""; input.style.display = "none";
+    $("#bandara-results").classList.remove("open");
+    $("#bandara-results").innerHTML = "";
+  }
+  function clearAirport(){
+    selectedAirport = null;
+    $("#bandara-chip").classList.remove("show");
+    var input = $("#bandara-search");
+    input.style.display = ""; input.value = ""; input.focus();
+  }
+
+  /* ---------- Gauge risiko ---------- */
+  function buildGaugeTrack(){
+    var track = $("#gauge-track");
+    track.innerHTML = "";
+    var totalUnits = 30 - 3 + 1;
+    RISK_BANDS.forEach(function(b){
+      var width = (b.max - b.min + 1) / totalUnits * 100;
+      var seg = document.createElement("div");
+      seg.className = "gauge-seg";
+      seg.dataset.label = b.label;
+      seg.style.width = width + "%";
+      seg.style.background = b.color;
+      seg.style.opacity = "0.35";
+      track.appendChild(seg);
+    });
+    var marker = document.createElement("div");
+    marker.className = "gauge-marker";
+    marker.id = "gauge-marker";
+    marker.style.left = "0%";
+    track.appendChild(marker);
+  }
+  function computeRisiko(){
+    var an = parseInt($("#ancaman-nilai").value, 10);
+    var kn = parseInt($("#kerentanan-nilai").value, 10);
+    var kon = parseInt($("#konsekuensi-nilai").value, 10);
+    var badge = $("#risiko-badge");
+    var val = $("#risiko-nilai");
+    var penerimaan = $("#penerimaan-text");
+    var marker = $("#gauge-marker");
+    var segs = $all(".gauge-seg");
+
+    if(isNaN(an) || isNaN(kn) || isNaN(kon)){
+      val.textContent = "—";
+      badge.textContent = "Belum lengkap";
+      badge.style.background = "var(--border)";
+      badge.style.color = "var(--text-muted)";
+      penerimaan.textContent = "—";
+      if(marker) marker.style.left = "0%";
+      segs.forEach(function(s){ s.style.opacity = "0.35"; });
+      return null;
+    }
+    var total = an + kn + kon;
+    var band = RISK_BANDS[0];
+    for(var i=0;i<RISK_BANDS.length;i++){
+      if(total >= RISK_BANDS[i].min && total <= RISK_BANDS[i].max){ band = RISK_BANDS[i]; break; }
+    }
+    val.textContent = total;
+    badge.textContent = band.label;
+    badge.style.background = band.color;
+    badge.style.color = "#fff";
+    penerimaan.textContent = PENERIMAAN_MAP[band.label];
+    var pct = ((total - 3) / (30 - 3)) * 100;
+    if(marker) marker.style.left = pct + "%";
+    segs.forEach(function(s){ s.style.opacity = (s.dataset.label === band.label) ? "1" : "0.35"; });
+    return {total: total, rating: band.label, penerimaan: PENERIMAAN_MAP[band.label]};
+  }
+
+  /* ---------- Simpan skenario ---------- */
+  function validateScenario(){
+    var errors = [];
+    if(!selectedAirport) errors.push("Pilih bandar udara terlebih dahulu.");
+    var kategori = $("#kategori").value;
+    if(!kategori) errors.push("Pilih kategori ancaman.");
+    var skenario = $("#skenario").value.trim();
+    if(!skenario) errors.push("Isi skenario ancaman.");
+    var risiko = computeRisiko();
+    if(!risiko) errors.push("Lengkapi Nilai Ancaman, Kerentanan, dan Konsekuensi (1-10).");
+    return {errors: errors, risiko: risiko, kategori: kategori, skenario: skenario};
+  }
+
+  function resetScenarioFields(){
+    $("#kategori").value = "";
+    populateIdRiskSelect(null);
+    $("#skenario-mode").textContent = "";
+    $("#skenario").value = "";
+    $("#area").value = "";
+    $("#langkah-saat-ini").value = "";
+    $("#kerentanan-saat-ini").value = "";
+    $("#ancaman-nilai").value = ""; $("#ancaman-rating").value = "";
+    $("#kerentanan-nilai").value = ""; $("#kerentanan-rating").value = "";
+    $("#konsekuensi-nilai").value = ""; $("#konsekuensi-rating").value = "";
+    $("#perlakuan").value = ""; $("#prioritas").value = "";
+    $("#langkah-tambahan").value = "";
+    $("#pemilik-risiko").value = "";
+    $("#tanggal-kaji").value = "";
+    $("#keterangan").value = "";
+    computeRisiko();
+  }
+
+  function addToSessionList(payload){
+    sessionEntries.unshift(payload);
+    renderSessionList();
+  }
+  function renderSessionList(){
+    var wrap = $("#session-list");
+    if(sessionEntries.length === 0){
+      wrap.innerHTML = '<div class="empty-state"><div class="es-mark">&#128203;</div>Belum ada skenario yang disimpan pada sesi ini.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    sessionEntries.forEach(function(p){
+      var item = document.createElement("div");
+      item.className = "session-item";
+      var badge = document.createElement("div");
+      badge.className = "session-badge";
+      badge.style.background = bandColor(p.risikoRating);
+      var textWrap = document.createElement("div");
+      var title = document.createElement("div");
+      title.className = "si-title";
+      var kategoriLabel = p.kategori.indexOf(" - ") > -1 ? p.kategori.split(" - ").slice(1).join(" - ") : p.kategori;
+      title.textContent = kategoriLabel;
+      var sub = document.createElement("div");
+      sub.className = "si-sub";
+      var skenarioShort = p.skenario.length > 70 ? (p.skenario.slice(0,70) + "…") : p.skenario;
+      sub.textContent = skenarioShort + "  •  Risiko " + p.risikoNilai + " (" + p.risikoRating + ")";
+      textWrap.appendChild(title); textWrap.appendChild(sub);
+      item.appendChild(badge); item.appendChild(textWrap);
+      wrap.appendChild(item);
+    });
+  }
+
+  function simpanSkenario(){
+    var btn = $("#btn-simpan");
+    var check = validateScenario();
+    if(check.errors.length){
+      showToast(check.errors[0], true);
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Menyimpan…';
+
+    var payload = {
+      bandaraId: selectedAirport.id,
+      bandaraNama: selectedAirport.nama,
+      bandaraKota: selectedAirport.kota,
+      bandaraIata: selectedAirport.iata,
+      bandaraKelas: selectedAirport.kelas,
+      bulan: $("#bulan").value,
+      tahun: $("#tahun").value,
+      namaPengisi: $("#nama-pengisi").value.trim(),
+      jabatanPengisi: $("#jabatan-pengisi").value.trim(),
+      kategori: check.kategori,
+      idRisikoKatalog: $("#id-risk").value || "",
+      skenario: check.skenario,
+      area: $("#area").value.trim(),
+      langkahSaatIni: $("#langkah-saat-ini").value.trim(),
+      kerentananSaatIni: $("#kerentanan-saat-ini").value.trim(),
+      ancamanNilai: $("#ancaman-nilai").value,
+      ancamanRating: $("#ancaman-rating").value,
+      kerentananNilai: $("#kerentanan-nilai").value,
+      kerentananRating: $("#kerentanan-rating").value,
+      konsekuensiNilai: $("#konsekuensi-nilai").value,
+      konsekuensiRating: $("#konsekuensi-rating").value,
+      risikoNilai: check.risiko.total,
+      risikoRating: check.risiko.rating,
+      kategoriPenerimaan: check.risiko.penerimaan,
+      perlakuan: $("#perlakuan").value,
+      prioritas: $("#prioritas").value,
+      langkahTambahan: $("#langkah-tambahan").value.trim(),
+      pemilikRisiko: $("#pemilik-risiko").value.trim(),
+      tanggalKaji: $("#tanggal-kaji").value,
+      keterangan: $("#keterangan").value.trim(),
+      savedAt: new Date().toISOString()
+    };
+    payload.id = "submission-" + selectedAirport.id + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
+
+    if(!gasReady()){
+      btn.disabled = false;
+      btn.textContent = "Simpan Skenario Ini";
+      showToast("Backend Google Sheets belum dikonfigurasi (GAS_URL). Hubungi admin sistem.", true);
+      return;
+    }
+
+    fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // hindari CORS preflight
+      body: JSON.stringify(payload)
+    }).then(function(res){ return res.json(); }).then(function(res){
+      if(!res || res.ok !== true){ throw new Error((res && res.error) || "Respon backend tidak valid."); }
+      addToSessionList(payload);
+      resetScenarioFields();
+      showToast("Skenario tersimpan.");
+    }).catch(function(err){
+      console.error(err);
+      showToast("Gagal menyimpan: " + (err && err.message ? err.message : "coba lagi"), true);
+    }).finally(function(){
+      btn.disabled = false;
+      btn.textContent = "Simpan Skenario Ini";
+    });
+  }
+
+  /* ---------- Rekap & Ekspor ---------- */
+  function renderStats(results){
+    $("#stat-total").textContent = results.length;
+    var bandaraSet = {};
+    var tinggi = 0;
+    results.forEach(function(r){
+      bandaraSet[r.bandaraId] = true;
+      if(r.risikoRating === "Tinggi" || r.risikoRating === "Menengah-Tinggi") tinggi++;
+    });
+    $("#stat-bandara").textContent = Object.keys(bandaraSet).length;
+    $("#stat-tinggi").textContent = tinggi;
+  }
+  function applyFilters(results){
+    var q = $("#rekap-filter-text").value.trim().toLowerCase();
+    var ratingFilter = $("#rekap-filter-rating").value;
+    return results.filter(function(r){
+      var matchQ = !q || (r.bandaraNama||"").toLowerCase().indexOf(q) > -1 || (r.skenario||"").toLowerCase().indexOf(q) > -1;
+      var matchR = !ratingFilter || r.risikoRating === ratingFilter;
+      return matchQ && matchR;
+    });
+  }
+  function renderRekapTable(results){
+    var filtered = applyFilters(results);
+    var tbody = $("#rekap-tbody");
+    tbody.innerHTML = "";
+    if(filtered.length === 0){
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Tidak ada data yang cocok.</td></tr>';
+      return;
+    }
+    filtered.sort(function(a,b){ return (b.savedAt||"").localeCompare(a.savedAt||""); });
+    filtered.forEach(function(r){
+      var tr = document.createElement("tr");
+      tr.appendChild(tdText(r.bandaraNama + (r.bandaraIata ? (" (" + r.bandaraIata + ")") : "")));
+      tr.appendChild(tdText((r.kategori||"").split(" - ")[0]));
+      var skenarioShort = r.skenario && r.skenario.length > 60 ? (r.skenario.slice(0,60) + "…") : r.skenario;
+      tr.appendChild(tdText(skenarioShort));
+      var tdRisk = document.createElement("td");
+      var chip = document.createElement("span");
+      chip.className = "chip-risk";
+      chip.style.background = bandColor(r.risikoRating);
+      chip.textContent = (r.risikoNilai != null ? (r.risikoNilai + " · ") : "") + (r.risikoRating || "-");
+      tdRisk.appendChild(chip);
+      tr.appendChild(tdRisk);
+      tr.appendChild(tdText(r.perlakuan ? r.perlakuan.split(" (")[0] : "-"));
+      tr.appendChild(tdText(r.namaPengisi));
+      tr.appendChild(tdText(r.savedAt ? new Date(r.savedAt).toLocaleString("id-ID") : "-"));
+      tbody.appendChild(tr);
+    });
+  }
+  function loadRekap(){
+    var tbody = $("#rekap-tbody");
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><span class="spinner dark"></span> Memuat data…</td></tr>';
+
+    if(!gasReady()){
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Backend Google Sheets belum dikonfigurasi (GAS_URL). Hubungi admin sistem.</td></tr>';
+      return;
+    }
+
+    fetch(GAS_URL, { method: "GET" }).then(function(res){ return res.json(); }).then(function(res){
+      if(!res || res.ok !== true){ throw new Error((res && res.error) || "Respon backend tidak valid."); }
+      var results = res.data || [];
+      // Normalisasi tipe angka (Google Sheets bisa mengembalikan angka atau string kosong)
+      results.forEach(function(r){
+        ["ancamanNilai","kerentananNilai","konsekuensiNilai","risikoNilai"].forEach(function(f){
+          if(r[f] === "" || r[f] === undefined || r[f] === null){ r[f] = null; }
+          else { r[f] = Number(r[f]); }
+        });
+      });
+      allSubmissionsCache = results;
+      renderStats(allSubmissionsCache);
+      renderRekapTable(allSubmissionsCache);
+      showToast("Data dimuat: " + allSubmissionsCache.length + " skenario.");
+    }).catch(function(err){
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Gagal memuat data. Coba lagi.</td></tr>';
+      showToast("Gagal memuat data.", true);
+    });
+  }
+  function exportXlsx(){
+    if(typeof XLSX === "undefined"){
+      showToast("Modul ekspor belum siap. Periksa koneksi internet lalu coba lagi.", true);
+      return;
+    }
+    if(!allSubmissionsCache.length){
+      showToast('Belum ada data untuk diekspor. Klik "Muat Ulang" dulu.', true);
+      return;
+    }
+    var rows = allSubmissionsCache.map(function(r){
+      return {
+        "Bandar Udara": r.bandaraNama, "Kota": r.bandaraKota, "IATA": r.bandaraIata, "Kelas": r.bandaraKelas,
+        "Bulan": r.bulan, "Tahun": r.tahun,
+        "Kategori Ancaman": r.kategori, "ID Risk Katalog": r.idRisikoKatalog, "Skenario Ancaman": r.skenario, "Area": r.area,
+        "Langkah Keamanan Saat Ini": r.langkahSaatIni, "Kerentanan Saat Ini": r.kerentananSaatIni,
+        "Ancaman Nilai": r.ancamanNilai, "Ancaman Rating": r.ancamanRating,
+        "Kerentanan Nilai": r.kerentananNilai, "Kerentanan Rating": r.kerentananRating,
+        "Konsekuensi Nilai": r.konsekuensiNilai, "Konsekuensi Rating": r.konsekuensiRating,
+        "Risiko Nilai": r.risikoNilai, "Risiko Rating": r.risikoRating,
+        "Kategori Penerimaan": r.kategoriPenerimaan,
+        "Perlakuan Risiko": r.perlakuan, "Prioritas": r.prioritas,
+        "Langkah Keamanan Tambahan": r.langkahTambahan,
+        "Pemilik Risiko": r.pemilikRisiko, "Tanggal Kaji Ulang": r.tanggalKaji,
+        "Keterangan": r.keterangan,
+        "Nama Pengisi": r.namaPengisi, "Jabatan Pengisi": r.jabatanPengisi,
+        "Disimpan Pada": r.savedAt
+      };
+    });
+    var ws = XLSX.utils.json_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Risiko");
+    var fname = "Rekap_DPRK_" + new Date().toISOString().slice(0,10) + ".xlsx";
+    XLSX.writeFile(wb, fname);
+  }
+
+  /* ---------- Init & wiring ---------- */
+  function init(){
+    fillSimpleSelect($("#bulan"), BULAN, "Pilih bulan...");
+    fillKategoriSelect($("#kategori"));
+    fillSimpleSelect($("#ancaman-rating"), RATING_KUALITATIF, "Rating...");
+    fillSimpleSelect($("#kerentanan-rating"), RATING_KUALITATIF, "Rating...");
+    fillSimpleSelect($("#konsekuensi-rating"), RATING_KUALITATIF, "Rating...");
+    fillSimpleSelect($("#perlakuan"), PERLAKUAN, "Pilih perlakuan...");
+    fillSimpleSelect($("#prioritas"), PRIORITAS, "Pilih prioritas...");
+    RISK_BANDS.forEach(function(b){
+      var o = document.createElement("option");
+      o.value = b.label; o.textContent = b.label;
+      $("#rekap-filter-rating").appendChild(o);
+    });
+    buildGaugeTrack();
+    computeRisiko();
+    populateIdRiskSelect(null);
+
+    $("#kategori").addEventListener("change", function(){
+      var kode = this.value ? this.value.slice(0,2) : null;
+      populateIdRiskSelect(kode);
+      $("#id-risk").value = "";
+      $("#skenario-mode").textContent = "";
+      $("#skenario").value = "";
+      $("#area").value = "";
+    });
+    $("#id-risk").addEventListener("change", applyIdRiskSelection);
+
+    $("#bandara-search").addEventListener("input", function(){ renderResults(this.value); });
+    $("#bandara-search").addEventListener("focus", function(){ if(this.value) renderResults(this.value); });
+    document.addEventListener("click", function(e){
+      if(!e.target.closest(".combobox")){ $("#bandara-results").classList.remove("open"); }
+    });
+    $("#bandara-chip-clear").addEventListener("click", clearAirport);
+
+    ["ancaman-nilai","kerentanan-nilai","konsekuensi-nilai"].forEach(function(id){
+      var input = document.getElementById(id);
+      input.addEventListener("input", computeRisiko);
+      input.addEventListener("blur", function(){
+        if(this.value !== ""){
+          var v = parseInt(this.value, 10);
+          if(isNaN(v)){ this.value = ""; }
+          else { this.value = Math.max(1, Math.min(10, v)); }
+          computeRisiko();
+        }
+      });
+    });
+
+    $("#btn-simpan").addEventListener("click", simpanSkenario);
+    $("#btn-reset").addEventListener("click", function(){ resetScenarioFields(); showToast("Form skenario dibersihkan."); });
+
+    $all(".tab").forEach(function(t){
+      t.addEventListener("click", function(){
+        $all(".tab").forEach(function(x){ x.classList.remove("active"); });
+        t.classList.add("active");
+        var name = t.getAttribute("data-tab");
+        $all(".view").forEach(function(v){ v.classList.remove("active"); });
+        $("#view-" + name).classList.add("active");
+        if(name === "rekap" && allSubmissionsCache.length === 0){ loadRekap(); }
+      });
+    });
+
+    $("#btn-refresh-rekap").addEventListener("click", loadRekap);
+    $("#btn-export").addEventListener("click", exportXlsx);
+    $("#rekap-filter-text").addEventListener("input", function(){ renderRekapTable(allSubmissionsCache); });
+    $("#rekap-filter-rating").addEventListener("change", function(){ renderRekapTable(allSubmissionsCache); });
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
