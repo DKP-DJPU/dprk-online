@@ -332,6 +332,12 @@
             <input type="text" id="jabatan-pengisi" placeholder="mis. Airport Security Manager">
           </div>
         </div>
+
+        <div class="field">
+          <label for="link-file-dprk">Link File DPRK (Google Drive / cloud lainnya)</label>
+          <input type="text" id="link-file-dprk" placeholder="https://drive.google.com/&hellip;">
+          <p class="hint">Tempel link file DPRK yang sudah diupload ke Google Drive atau penyimpanan cloud lainnya. Pastikan akses link diatur agar dapat dilihat.</p>
+        </div>
       </div>
 
       <div class="card" id="card-skenario">
@@ -552,6 +558,48 @@
     {min:20, max:25, label:"Menengah-Tinggi",  color:"#DD8A42"},
     {min:26, max:30, label:"Tinggi",           color:"#CF4A42"}
   ];
+  /* Band per faktor (skala nilai 1-10) untuk Ancaman/Kerentanan/Konsekuensi */
+  var FAKTOR_BANDS = [
+    {min:1, max:2,  label:"Rendah",           color:"#5B9E5E"},
+    {min:3, max:4,  label:"Menengah-Rendah",  color:"#8FB86A"},
+    {min:5, max:6,  label:"Menengah",         color:"#E0B341"},
+    {min:7, max:8,  label:"Menengah-Tinggi",  color:"#DD8A42"},
+    {min:9, max:10, label:"Tinggi",           color:"#CF4A42"}
+  ];
+  function ratingForNilaiFaktor(v){
+    for(var i=0;i<FAKTOR_BANDS.length;i++){
+      if(v >= FAKTOR_BANDS[i].min && v <= FAKTOR_BANDS[i].max) return FAKTOR_BANDS[i];
+    }
+    return null;
+  }
+  function updateFaktorRating(nilaiId, ratingId){
+    var nilaiInput = document.getElementById(nilaiId);
+    var ratingSelect = document.getElementById(ratingId);
+    var raw = nilaiInput.value;
+    if(raw === ""){
+      ratingSelect.value = "";
+      ratingSelect.style.background = "";
+      ratingSelect.style.color = "";
+      ratingSelect.style.borderColor = "";
+      return;
+    }
+    var v = parseInt(raw, 10);
+    if(isNaN(v)){
+      ratingSelect.value = "";
+      ratingSelect.style.background = "";
+      ratingSelect.style.color = "";
+      ratingSelect.style.borderColor = "";
+      return;
+    }
+    v = Math.max(1, Math.min(10, v));
+    var band = ratingForNilaiFaktor(v);
+    if(band){
+      ratingSelect.value = band.label;
+      ratingSelect.style.background = band.color;
+      ratingSelect.style.color = "#fff";
+      ratingSelect.style.borderColor = band.color;
+    }
+  }
   var PENERIMAAN_MAP = {
     "Tinggi":"Tidak dapat ditoleransi",
     "Menengah-Tinggi":"Tidak dapat ditoleransi",
@@ -795,9 +843,9 @@
     $("#area").value = "";
     $("#langkah-saat-ini").value = "";
     $("#kerentanan-saat-ini").value = "";
-    $("#ancaman-nilai").value = ""; $("#ancaman-rating").value = "";
-    $("#kerentanan-nilai").value = ""; $("#kerentanan-rating").value = "";
-    $("#konsekuensi-nilai").value = ""; $("#konsekuensi-rating").value = "";
+    $("#ancaman-nilai").value = ""; updateFaktorRating("ancaman-nilai","ancaman-rating");
+    $("#kerentanan-nilai").value = ""; updateFaktorRating("kerentanan-nilai","kerentanan-rating");
+    $("#konsekuensi-nilai").value = ""; updateFaktorRating("konsekuensi-nilai","konsekuensi-rating");
     $("#perlakuan").value = ""; $("#prioritas").value = "";
     $("#langkah-tambahan").value = "";
     $("#pemilik-risiko").value = "";
@@ -858,6 +906,7 @@
       tahun: $("#tahun").value,
       namaPengisi: $("#nama-pengisi").value.trim(),
       jabatanPengisi: $("#jabatan-pengisi").value.trim(),
+      linkFileDprk: $("#link-file-dprk").value.trim(),
       kategori: check.kategori,
       idRisikoKatalog: $("#id-risk").value || "",
       skenario: check.skenario,
@@ -1148,6 +1197,7 @@
         "Pemilik Risiko": r.pemilikRisiko, "Tanggal Kaji Ulang": r.tanggalKaji,
         "Keterangan": r.keterangan,
         "Nama Pengisi": r.namaPengisi, "Jabatan Pengisi": r.jabatanPengisi,
+        "Link File DPRK": r.linkFileDprk,
         "Disimpan Pada": r.savedAt
       };
     });
@@ -1162,9 +1212,18 @@
   function init(){
     fillSimpleSelect($("#bulan"), BULAN, "Pilih bulan...");
     fillKategoriSelect($("#kategori"));
-    fillSimpleSelect($("#ancaman-rating"), RATING_KUALITATIF, "Rating...");
-    fillSimpleSelect($("#kerentanan-rating"), RATING_KUALITATIF, "Rating...");
-    fillSimpleSelect($("#konsekuensi-rating"), RATING_KUALITATIF, "Rating...");
+    fillSimpleSelect($("#ancaman-rating"), RATING_KUALITATIF, "Otomatis dari nilai");
+    fillSimpleSelect($("#kerentanan-rating"), RATING_KUALITATIF, "Otomatis dari nilai");
+    fillSimpleSelect($("#konsekuensi-rating"), RATING_KUALITATIF, "Otomatis dari nilai");
+    ["#ancaman-rating","#kerentanan-rating","#konsekuensi-rating"].forEach(function(sel){
+      var el = $(sel);
+      el.disabled = true;
+      el.style.fontWeight = "700";
+      el.style.cursor = "default";
+      el.style.appearance = "none";
+      el.style.webkitAppearance = "none";
+      el.style.opacity = "1";
+    });
     fillSimpleSelect($("#perlakuan"), PERLAKUAN, "Pilih perlakuan...");
     fillSimpleSelect($("#prioritas"), PRIORITAS, "Pilih prioritas...");
     RISK_BANDS.forEach(function(b){
@@ -1193,16 +1252,26 @@
     });
     $("#bandara-chip-clear").addEventListener("click", clearAirport);
 
-    ["ancaman-nilai","kerentanan-nilai","konsekuensi-nilai"].forEach(function(id){
+    var FAKTOR_PAIRS = {
+      "ancaman-nilai":"ancaman-rating",
+      "kerentanan-nilai":"kerentanan-rating",
+      "konsekuensi-nilai":"konsekuensi-rating"
+    };
+    Object.keys(FAKTOR_PAIRS).forEach(function(id){
+      var ratingId = FAKTOR_PAIRS[id];
       var input = document.getElementById(id);
-      input.addEventListener("input", computeRisiko);
+      input.addEventListener("input", function(){
+        updateFaktorRating(id, ratingId);
+        computeRisiko();
+      });
       input.addEventListener("blur", function(){
         if(this.value !== ""){
           var v = parseInt(this.value, 10);
           if(isNaN(v)){ this.value = ""; }
           else { this.value = Math.max(1, Math.min(10, v)); }
-          computeRisiko();
         }
+        updateFaktorRating(id, ratingId);
+        computeRisiko();
       });
     });
 
