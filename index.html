@@ -215,6 +215,19 @@
   .stat-box .num{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--navy-900);}
   .stat-box .lbl{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
   .rekap-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .view-toggle-group{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;flex:none;}
+  .btn-toggle{background:#fff;color:var(--text-muted);border:none;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .btn-toggle+.btn-toggle{border-left:1.5px solid var(--border);}
+  .btn-toggle.active{background:var(--navy-700);color:#fff;}
+  .bandara-group-row{cursor:pointer;}
+  .bandara-group-row:hover{background:var(--navy-100);}
+  .rating-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;margin:1px 3px 1px 0;}
+  .bandara-detail-row td{padding:0;background:#F7F8FA;}
+  .bandara-detail-inner{padding:8px 16px 14px 40px;}
+  .bandara-detail-inner .mini-item{padding:7px 0;border-bottom:1px dashed var(--border);font-size:13px;}
+  .bandara-detail-inner .mini-item:last-child{border-bottom:none;}
+  .bandara-detail-inner .mini-item .mi-top{display:flex;justify-content:space-between;gap:10px;font-weight:600;color:var(--navy-700);}
+  .bandara-detail-inner .mini-item .mi-sub{color:var(--text-muted);margin-top:2px;}
   .rekap-toolbar select, .rekap-toolbar input{flex:1;min-width:120px;}
   .rekap-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
   table.rekap{border-collapse:collapse;width:100%;font-size:12.5px;min-width:640px;}
@@ -441,6 +454,10 @@
       <div class="card">
         <div class="card-head"><h2>Data Terkumpul</h2></div>
         <div class="rekap-toolbar">
+          <div class="view-toggle-group" role="group" aria-label="Mode tampilan rekap">
+            <button class="btn-toggle active" id="btn-mode-list" type="button">Daftar Skenario</button>
+            <button class="btn-toggle" id="btn-mode-bandara" type="button">Per Bandara</button>
+          </div>
           <input type="text" id="rekap-filter-text" placeholder="Cari bandara / skenario&hellip;">
           <select id="rekap-filter-rating">
             <option value="">Semua Rating</option>
@@ -448,7 +465,7 @@
           <button class="btn btn-ghost btn-sm" id="btn-refresh-rekap" type="button">Muat Ulang</button>
           <button class="btn btn-primary btn-sm" id="btn-export" type="button" style="flex:none;">Ekspor .xlsx</button>
         </div>
-        <div class="rekap-table-wrap">
+        <div class="rekap-table-wrap" id="rekap-table-list">
           <table class="rekap">
             <thead>
               <tr>
@@ -458,6 +475,19 @@
             </thead>
             <tbody id="rekap-tbody">
               <tr><td colspan="7" class="empty-state">Klik &ldquo;Muat Ulang&rdquo; untuk mengambil data.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rekap-table-wrap" id="rekap-table-bandara" style="display:none;">
+          <table class="rekap">
+            <thead>
+              <tr>
+                <th>Bandara</th><th>Jumlah Skenario</th><th>Risiko Tertinggi</th>
+                <th>Distribusi Rating</th><th>Terakhir Diisi</th>
+              </tr>
+            </thead>
+            <tbody id="rekap-bandara-tbody">
+              <tr><td colspan="5" class="empty-state">Klik &ldquo;Muat Ulang&rdquo; untuk mengambil data.</td></tr>
             </tbody>
           </table>
         </div>
@@ -538,6 +568,8 @@
   var selectedAirport = null;
   var sessionEntries = [];
   var allSubmissionsCache = [];
+  var rekapViewMode = "list"; // "list" | "bandara"
+  var expandedBandaraIds = {};
 
   /* ---------- Helpers ---------- */
   function $(sel){ return document.querySelector(sel); }
@@ -925,6 +957,143 @@
       tbody.appendChild(tr);
     });
   }
+  var RATING_ORDER = ["Tinggi","Menengah-Tinggi","Menengah","Menengah-Rendah","Rendah"];
+
+  function groupByBandara(results){
+    var groups = {};
+    var order = [];
+    results.forEach(function(r){
+      var key = r.bandaraId || r.bandaraNama || "?";
+      if(!groups[key]){
+        groups[key] = {
+          bandaraId: key,
+          bandaraNama: r.bandaraNama,
+          bandaraIata: r.bandaraIata,
+          bandaraKota: r.bandaraKota,
+          items: []
+        };
+        order.push(key);
+      }
+      groups[key].items.push(r);
+    });
+    return order.map(function(k){ return groups[k]; });
+  }
+
+  function renderRekapByBandara(results){
+    var filtered = applyFilters(results);
+    var tbody = $("#rekap-bandara-tbody");
+    tbody.innerHTML = "";
+    if(filtered.length === 0){
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Tidak ada data yang cocok.</td></tr>';
+      return;
+    }
+    var groups = groupByBandara(filtered);
+    groups.sort(function(a,b){ return b.items.length - a.items.length; });
+
+    groups.forEach(function(g){
+      g.items.sort(function(a,b){ return (b.savedAt||"").localeCompare(a.savedAt||""); });
+
+      var highest = null;
+      g.items.forEach(function(it){
+        var idx = RATING_ORDER.indexOf(it.risikoRating);
+        if(idx === -1) return;
+        if(highest === null || idx < RATING_ORDER.indexOf(highest)) highest = it.risikoRating;
+      });
+
+      var counts = {};
+      g.items.forEach(function(it){ counts[it.risikoRating] = (counts[it.risikoRating]||0) + 1; });
+
+      var isOpen = !!expandedBandaraIds[g.bandaraId];
+
+      var tr = document.createElement("tr");
+      tr.className = "bandara-group-row";
+      tr.dataset.bandaraId = g.bandaraId;
+
+      var tdName = document.createElement("td");
+      tdName.textContent = (isOpen ? "▾ " : "▸ ") + g.bandaraNama + (g.bandaraIata ? (" (" + g.bandaraIata + ")") : "");
+      tr.appendChild(tdName);
+
+      tr.appendChild(tdText(g.items.length));
+
+      var tdHigh = document.createElement("td");
+      if(highest){
+        var chip = document.createElement("span");
+        chip.className = "chip-risk";
+        chip.style.background = bandColor(highest);
+        chip.textContent = highest;
+        tdHigh.appendChild(chip);
+      } else {
+        tdHigh.textContent = "-";
+      }
+      tr.appendChild(tdHigh);
+
+      var tdDist = document.createElement("td");
+      RATING_ORDER.forEach(function(rl){
+        if(!counts[rl]) return;
+        var pill = document.createElement("span");
+        pill.className = "rating-pill";
+        pill.style.background = bandColor(rl);
+        pill.textContent = rl + " " + counts[rl];
+        tdDist.appendChild(pill);
+      });
+      tr.appendChild(tdDist);
+
+      var lastSaved = g.items[0] && g.items[0].savedAt ? new Date(g.items[0].savedAt).toLocaleString("id-ID") : "-";
+      tr.appendChild(tdText(lastSaved));
+
+      tr.addEventListener("click", function(){
+        expandedBandaraIds[g.bandaraId] = !expandedBandaraIds[g.bandaraId];
+        renderRekapByBandara(allSubmissionsCache);
+      });
+      tbody.appendChild(tr);
+
+      if(isOpen){
+        var trDetail = document.createElement("tr");
+        trDetail.className = "bandara-detail-row";
+        var tdDetail = document.createElement("td");
+        tdDetail.colSpan = 5;
+        var inner = document.createElement("div");
+        inner.className = "bandara-detail-inner";
+        g.items.forEach(function(it){
+          var mi = document.createElement("div");
+          mi.className = "mini-item";
+          var top = document.createElement("div");
+          top.className = "mi-top";
+          var kategoriLabel = (it.kategori||"").indexOf(" - ") > -1 ? it.kategori.split(" - ").slice(1).join(" - ") : it.kategori;
+          var left = document.createElement("span");
+          left.textContent = kategoriLabel || "-";
+          var right = document.createElement("span");
+          right.style.color = bandColor(it.risikoRating);
+          right.textContent = (it.risikoNilai != null ? (it.risikoNilai + " · ") : "") + (it.risikoRating || "-");
+          top.appendChild(left); top.appendChild(right);
+          var sub = document.createElement("div");
+          sub.className = "mi-sub";
+          var skenarioShort = it.skenario && it.skenario.length > 90 ? (it.skenario.slice(0,90) + "…") : it.skenario;
+          sub.textContent = (skenarioShort || "-") + " — " + (it.namaPengisi || "-") + " · " + (it.savedAt ? new Date(it.savedAt).toLocaleString("id-ID") : "-");
+          mi.appendChild(top); mi.appendChild(sub);
+          inner.appendChild(mi);
+        });
+        tdDetail.appendChild(inner);
+        trDetail.appendChild(tdDetail);
+        tbody.appendChild(trDetail);
+      }
+    });
+  }
+
+  function renderRekapCurrentMode(){
+    if(rekapViewMode === "bandara"){ renderRekapByBandara(allSubmissionsCache); }
+    else { renderRekapTable(allSubmissionsCache); }
+  }
+
+  function setRekapMode(mode){
+    rekapViewMode = mode;
+    $("#btn-mode-list").classList.toggle("active", mode === "list");
+    $("#btn-mode-bandara").classList.toggle("active", mode === "bandara");
+    $("#rekap-table-list").style.display = mode === "list" ? "" : "none";
+    $("#rekap-table-bandara").style.display = mode === "bandara" ? "" : "none";
+    renderRekapCurrentMode();
+  }
+
   function loadRekap(){
     var tbody = $("#rekap-tbody");
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><span class="spinner dark"></span> Memuat data…</td></tr>';
@@ -946,7 +1115,7 @@
       });
       allSubmissionsCache = results;
       renderStats(allSubmissionsCache);
-      renderRekapTable(allSubmissionsCache);
+      renderRekapCurrentMode();
       showToast("Data dimuat: " + allSubmissionsCache.length + " skenario.");
     }).catch(function(err){
       console.error(err);
@@ -1053,8 +1222,10 @@
 
     $("#btn-refresh-rekap").addEventListener("click", loadRekap);
     $("#btn-export").addEventListener("click", exportXlsx);
-    $("#rekap-filter-text").addEventListener("input", function(){ renderRekapTable(allSubmissionsCache); });
-    $("#rekap-filter-rating").addEventListener("change", function(){ renderRekapTable(allSubmissionsCache); });
+    $("#rekap-filter-text").addEventListener("input", function(){ renderRekapCurrentMode(); });
+    $("#rekap-filter-rating").addEventListener("change", function(){ renderRekapCurrentMode(); });
+    $("#btn-mode-list").addEventListener("click", function(){ setRekapMode("list"); });
+    $("#btn-mode-bandara").addEventListener("click", function(){ setRekapMode("bandara"); });
   }
 
   init();
