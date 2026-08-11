@@ -296,11 +296,22 @@
     <section id="view-input" class="view active">
 
       <div class="card" id="card-identitas">
-        <div class="card-head"><span class="card-step">1</span><h2>Identitas Bandar Udara</h2></div>
+        <div class="card-head"><span class="card-step">1</span><h2>Identitas Operator Penerbangan</h2></div>
         <p class="card-sub">Pilih bandara Anda &mdash; hanya perlu diisi sekali per sesi.</p>
 
         <div class="field">
-          <label for="bandara-search">Bandar Udara</label>
+          <label for="operator">Jenis Operator Penerbangan</label>
+          <select id="operator">
+            <option value="">Pilih operator penerbangan...</option>
+            <option value="Bandar Udara">Bandar Udara</option>
+            <option value="AirNav Indonesia (LPPNPI)">AirNav Indonesia (LPPNPI)</option>
+            <option value="Airlines">Airlines</option>
+            <option value="Regulated Agent">Regulated Agent</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="bandara-search">Nama Operator Penerbangan</label>
           <div class="combobox">
             <input type="text" id="bandara-search" placeholder="Ketik nama bandara atau kota&hellip;" autocomplete="off">
             <div class="combobox-results" id="bandara-results"></div>
@@ -320,17 +331,6 @@
             <label for="tahun">Tahun</label>
             <input type="number" id="tahun" value="2026" min="2024" max="2035">
           </div>
-        </div>
-
-        <div class="field">
-          <label for="operator">Operator Penerbangan</label>
-          <select id="operator">
-            <option value="">Pilih operator penerbangan...</option>
-            <option value="Bandar Udara">Bandar Udara</option>
-            <option value="AirNav Indonesia (LPPNPI)">AirNav Indonesia (LPPNPI)</option>
-            <option value="Airlines">Airlines</option>
-            <option value="Regulated Agent">Regulated Agent</option>
-          </select>
         </div>
 
         <div class="field-row">
