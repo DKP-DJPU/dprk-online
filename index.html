@@ -322,6 +322,29 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="operator">Operator Penerbangan</label>
+          <select id="operator">
+            <option value="">Pilih operator penerbangan...</option>
+            <option value="Bandar Udara">Bandar Udara</option>
+            <option value="AirNav Indonesia (LPPNPI)">AirNav Indonesia (LPPNPI)</option>
+            <option value="Airlines">Airlines</option>
+            <option value="Regulated Agent">Regulated Agent</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="provinsi">Provinsi</label>
+            <select id="provinsi"></select>
+          </div>
+          <div class="field">
+            <label for="kabkota">Kabupaten/Kota</label>
+            <select id="kabkota" disabled></select>
+            <p class="hint" id="kabkota-hint">Pilih provinsi dahulu.</p>
+          </div>
+        </div>
+
         <div class="field-row">
           <div class="field">
             <label for="nama-pengisi">Nama Pengisi</label>
@@ -460,16 +483,18 @@
       <div class="card">
         <div class="card-head"><h2>Data Terkumpul</h2></div>
         <div class="rekap-toolbar">
-          <div class="view-toggle-group" role="group" aria-label="Mode tampilan rekap">
-            <button class="btn-toggle active" id="btn-mode-list" type="button">Daftar Skenario</button>
-            <button class="btn-toggle" id="btn-mode-bandara" type="button">Per Bandara</button>
-          </div>
+          <select id="rekap-view-mode" style="flex:none;min-width:170px;">
+            <option value="list">Daftar Skenario</option>
+            <option value="bandara">Rekap per Bandara</option>
+            <option value="operator">Rekap per Operator Penerbangan</option>
+            <option value="provinsi">Rekap per Provinsi</option>
+            <option value="kabkota">Rekap per Kabupaten/Kota</option>
+          </select>
           <input type="text" id="rekap-filter-text" placeholder="Cari bandara / skenario&hellip;">
           <select id="rekap-filter-rating">
             <option value="">Semua Rating</option>
           </select>
           <button class="btn btn-ghost btn-sm" id="btn-refresh-rekap" type="button">Muat Ulang</button>
-          <button class="btn btn-primary btn-sm" id="btn-export" type="button" style="flex:none;">Ekspor .xlsx</button>
         </div>
         <div class="rekap-table-wrap" id="rekap-table-list">
           <table class="rekap">
@@ -484,19 +509,26 @@
             </tbody>
           </table>
         </div>
-        <div class="rekap-table-wrap" id="rekap-table-bandara" style="display:none;">
+        <div class="rekap-table-wrap" id="rekap-table-group" style="display:none;">
           <table class="rekap">
             <thead>
               <tr>
-                <th>Bandara</th><th>Jumlah Skenario</th><th>Risiko Tertinggi</th>
+                <th id="th-group-name">Bandara</th><th>Jumlah Skenario</th><th>Risiko Tertinggi</th>
                 <th>Distribusi Rating</th><th>Terakhir Diisi</th>
               </tr>
             </thead>
-            <tbody id="rekap-bandara-tbody">
+            <tbody id="rekap-group-tbody">
               <tr><td colspan="5" class="empty-state">Klik &ldquo;Muat Ulang&rdquo; untuk mengambil data.</td></tr>
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div class="card" id="card-kategori-chart">
+        <div class="card-head"><h2>Grafik Penilaian per Kategori Ancaman (19 Kategori)</h2></div>
+        <p class="card-sub">Rata-rata Nilai Risiko (skala 3&ndash;30) dan jumlah skenario per kategori, dari seluruh data yang dimuat.</p>
+        <div id="kategori-chart-wrap"></div>
+        <div id="kategori-chart-legend" style="display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-size:11.5px;color:var(--text-muted);"></div>
       </div>
     </section>
   </main>
@@ -505,7 +537,6 @@
 
 <div id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
   /* =====================================================================
@@ -547,6 +578,54 @@
     ["19","Other Attacks (Sumber Serangan Lainnya)"]
   ];
   var BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  var PROVINSI = [
+    "Aceh","Sumatera Utara","Sumatera Barat","Riau","Kepulauan Riau","Jambi","Sumatera Selatan",
+    "Kepulauan Bangka Belitung","Bengkulu","Lampung","DKI Jakarta","Jawa Barat","Jawa Tengah",
+    "DI Yogyakarta","Jawa Timur","Banten","Bali","Nusa Tenggara Barat","Nusa Tenggara Timur",
+    "Kalimantan Barat","Kalimantan Tengah","Kalimantan Selatan","Kalimantan Timur","Kalimantan Utara",
+    "Sulawesi Utara","Sulawesi Tengah","Sulawesi Selatan","Sulawesi Tenggara","Gorontalo","Sulawesi Barat",
+    "Maluku","Maluku Utara","Papua","Papua Barat","Papua Selatan","Papua Tengah","Papua Pegunungan","Papua Barat Daya"
+  ];
+  var KABKOTA = {
+    "Aceh": ["Kabupaten Aceh Barat","Kabupaten Aceh Barat Daya","Kabupaten Aceh Besar","Kabupaten Aceh Jaya","Kabupaten Aceh Selatan","Kabupaten Aceh Singkil","Kabupaten Aceh Tamiang","Kabupaten Aceh Tengah","Kabupaten Aceh Tenggara","Kabupaten Aceh Timur","Kabupaten Aceh Utara","Kabupaten Bener Meriah","Kabupaten Bireuen","Kabupaten Gayo Lues","Kabupaten Nagan Raya","Kabupaten Pidie","Kabupaten Pidie Jaya","Kabupaten Simeulue","Kota Banda Aceh","Kota Langsa","Kota Lhokseumawe","Kota Sabang","Kota Subulussalam"],
+    "Sumatera Utara": ["Kabupaten Asahan","Kabupaten Batu Bara","Kabupaten Dairi","Kabupaten Deli Serdang","Kabupaten Humbang Hasundutan","Kabupaten Karo","Kabupaten Labuhan Batu","Kabupaten Labuhan Batu Selatan","Kabupaten Labuhan Batu Utara","Kabupaten Langkat","Kabupaten Mandailing Natal","Kabupaten Nias","Kabupaten Nias Barat","Kabupaten Nias Selatan","Kabupaten Nias Utara","Kabupaten Padang Lawas","Kabupaten Padang Lawas Utara","Kabupaten Pakpak Bharat","Kabupaten Samosir","Kabupaten Serdang Bedagai","Kabupaten Simalungun","Kabupaten Tapanuli Selatan","Kabupaten Tapanuli Tengah","Kabupaten Tapanuli Utara","Kabupaten Toba Samosir","Kota Binjai","Kota Gunungsitoli","Kota Medan","Kota Padang Sidempuan","Kota Pematang Siantar","Kota Sibolga","Kota Tanjung Balai","Kota Tebing Tinggi"],
+    "Sumatera Barat": ["Kabupaten Agam","Kabupaten Dharmasraya","Kabupaten Kepulauan Mentawai","Kabupaten Lima Puluh Kota","Kabupaten Padang Pariaman","Kabupaten Pasaman","Kabupaten Pasaman Barat","Kabupaten Pesisir Selatan","Kabupaten Sijunjung","Kabupaten Solok","Kabupaten Solok Selatan","Kabupaten Tanah Datar","Kota Bukittinggi","Kota Padang","Kota Padang Panjang","Kota Pariaman","Kota Payakumbuh","Kota Sawah Lunto","Kota Solok"],
+    "Riau": ["Kabupaten Bengkalis","Kabupaten Indragiri Hilir","Kabupaten Indragiri Hulu","Kabupaten Kampar","Kabupaten Kepulauan Meranti","Kabupaten Kuantan Singingi","Kabupaten Pelalawan","Kabupaten Rokan Hilir","Kabupaten Rokan Hulu","Kabupaten Siak","Kota Dumai","Kota Pekanbaru"],
+    "Kepulauan Riau": ["Kabupaten Bintan","Kabupaten Karimun","Kabupaten Kepulauan Anambas","Kabupaten Lingga","Kabupaten Natuna","Kota Batam","Kota Tanjung Pinang"],
+    "Jambi": ["Kabupaten Batang Hari","Kabupaten Bungo","Kabupaten Kerinci","Kabupaten Merangin","Kabupaten Muaro Jambi","Kabupaten Sarolangun","Kabupaten Tanjung Jabung Barat","Kabupaten Tanjung Jabung Timur","Kabupaten Tebo","Kota Jambi","Kota Sungai Penuh"],
+    "Sumatera Selatan": ["Kabupaten Banyu Asin","Kabupaten Empat Lawang","Kabupaten Lahat","Kabupaten Muara Enim","Kabupaten Musi Banyu Asin","Kabupaten Musi Rawas","Kabupaten Musi Rawas Utara","Kabupaten Ogan Ilir","Kabupaten Ogan Komering Ilir","Kabupaten Ogan Komering Ulu","Kabupaten Ogan Komering Ulu Selatan","Kabupaten Ogan Komering Ulu Timur","Kabupaten Penukal Abab Lematang Ilir","Kota Lubuk Linggau","Kota Pagar Alam","Kota Palembang","Kota Prabumulih"],
+    "Kepulauan Bangka Belitung": ["Kabupaten Bangka","Kabupaten Bangka Barat","Kabupaten Bangka Selatan","Kabupaten Bangka Tengah","Kabupaten Belitung","Kabupaten Belitung Timur","Kota Pangkal Pinang"],
+    "Bengkulu": ["Kabupaten Bengkulu Selatan","Kabupaten Bengkulu Tengah","Kabupaten Bengkulu Utara","Kabupaten Kaur","Kabupaten Kepahiang","Kabupaten Lebong","Kabupaten Mukomuko","Kabupaten Rejang Lebong","Kabupaten Seluma","Kota Bengkulu"],
+    "Lampung": ["Kabupaten Lampung Barat","Kabupaten Lampung Selatan","Kabupaten Lampung Tengah","Kabupaten Lampung Timur","Kabupaten Lampung Utara","Kabupaten Mesuji","Kabupaten Pesawaran","Kabupaten Pesisir Barat","Kabupaten Pringsewu","Kabupaten Tanggamus","Kabupaten Tulang Bawang Barat","Kabupaten Tulangbawang","Kabupaten Way Kanan","Kota Bandar Lampung","Kota Metro"],
+    "DKI Jakarta": ["Kabupaten Kepulauan Seribu","Kota Jakarta Barat","Kota Jakarta Pusat","Kota Jakarta Selatan","Kota Jakarta Timur","Kota Jakarta Utara"],
+    "Jawa Barat": ["Kabupaten Bandung","Kabupaten Bandung Barat","Kabupaten Bekasi","Kabupaten Bogor","Kabupaten Ciamis","Kabupaten Cianjur","Kabupaten Cirebon","Kabupaten Garut","Kabupaten Indramayu","Kabupaten Karawang","Kabupaten Kuningan","Kabupaten Majalengka","Kabupaten Pangandaran","Kabupaten Purwakarta","Kabupaten Subang","Kabupaten Sukabumi","Kabupaten Sumedang","Kabupaten Tasikmalaya","Kota Bandung","Kota Banjar","Kota Bekasi","Kota Bogor","Kota Cimahi","Kota Cirebon","Kota Depok","Kota Sukabumi","Kota Tasikmalaya"],
+    "Jawa Tengah": ["Kabupaten Banjarnegara","Kabupaten Banyumas","Kabupaten Batang","Kabupaten Blora","Kabupaten Boyolali","Kabupaten Brebes","Kabupaten Cilacap","Kabupaten Demak","Kabupaten Grobogan","Kabupaten Jepara","Kabupaten Karanganyar","Kabupaten Kebumen","Kabupaten Kendal","Kabupaten Klaten","Kabupaten Kudus","Kabupaten Magelang","Kabupaten Pati","Kabupaten Pekalongan","Kabupaten Pemalang","Kabupaten Purbalingga","Kabupaten Purworejo","Kabupaten Rembang","Kabupaten Semarang","Kabupaten Sragen","Kabupaten Sukoharjo","Kabupaten Tegal","Kabupaten Temanggung","Kabupaten Wonogiri","Kabupaten Wonosobo","Kota Magelang","Kota Pekalongan","Kota Salatiga","Kota Semarang","Kota Surakarta","Kota Tegal"],
+    "DI Yogyakarta": ["Kabupaten Bantul","Kabupaten Gunung Kidul","Kabupaten Kulon Progo","Kabupaten Sleman","Kota Yogyakarta"],
+    "Jawa Timur": ["Kabupaten Bangkalan","Kabupaten Banyuwangi","Kabupaten Blitar","Kabupaten Bojonegoro","Kabupaten Bondowoso","Kabupaten Gresik","Kabupaten Jember","Kabupaten Jombang","Kabupaten Kediri","Kabupaten Lamongan","Kabupaten Lumajang","Kabupaten Madiun","Kabupaten Magetan","Kabupaten Malang","Kabupaten Mojokerto","Kabupaten Nganjuk","Kabupaten Ngawi","Kabupaten Pacitan","Kabupaten Pamekasan","Kabupaten Pasuruan","Kabupaten Ponorogo","Kabupaten Probolinggo","Kabupaten Sampang","Kabupaten Sidoarjo","Kabupaten Situbondo","Kabupaten Sumenep","Kabupaten Trenggalek","Kabupaten Tuban","Kabupaten Tulungagung","Kota Batu","Kota Blitar","Kota Kediri","Kota Madiun","Kota Malang","Kota Mojokerto","Kota Pasuruan","Kota Probolinggo","Kota Surabaya"],
+    "Banten": ["Kabupaten Lebak","Kabupaten Pandeglang","Kabupaten Serang","Kabupaten Tangerang","Kota Cilegon","Kota Serang","Kota Tangerang","Kota Tangerang Selatan"],
+    "Bali": ["Kabupaten Badung","Kabupaten Bangli","Kabupaten Buleleng","Kabupaten Gianyar","Kabupaten Jembrana","Kabupaten Karang Asem","Kabupaten Klungkung","Kabupaten Tabanan","Kota Denpasar"],
+    "Nusa Tenggara Barat": ["Kabupaten Bima","Kabupaten Dompu","Kabupaten Lombok Barat","Kabupaten Lombok Tengah","Kabupaten Lombok Timur","Kabupaten Lombok Utara","Kabupaten Sumbawa","Kabupaten Sumbawa Barat","Kota Bima","Kota Mataram"],
+    "Nusa Tenggara Timur": ["Kabupaten Alor","Kabupaten Belu","Kabupaten Ende","Kabupaten Flores Timur","Kabupaten Kupang","Kabupaten Lembata","Kabupaten Malaka","Kabupaten Manggarai","Kabupaten Manggarai Barat","Kabupaten Manggarai Timur","Kabupaten Nagekeo","Kabupaten Ngada","Kabupaten Rote Ndao","Kabupaten Sabu Raijua","Kabupaten Sikka","Kabupaten Sumba Barat","Kabupaten Sumba Barat Daya","Kabupaten Sumba Tengah","Kabupaten Sumba Timur","Kabupaten Timor Tengah Selatan","Kabupaten Timor Tengah Utara","Kota Kupang"],
+    "Kalimantan Barat": ["Kabupaten Bengkayang","Kabupaten Kapuas Hulu","Kabupaten Kayong Utara","Kabupaten Ketapang","Kabupaten Kubu Raya","Kabupaten Landak","Kabupaten Melawi","Kabupaten Mempawah","Kabupaten Sambas","Kabupaten Sanggau","Kabupaten Sekadau","Kabupaten Sintang","Kota Pontianak","Kota Singkawang"],
+    "Kalimantan Tengah": ["Kabupaten Barito Selatan","Kabupaten Barito Timur","Kabupaten Barito Utara","Kabupaten Gunung Mas","Kabupaten Kapuas","Kabupaten Katingan","Kabupaten Kotawaringin Barat","Kabupaten Kotawaringin Timur","Kabupaten Lamandau","Kabupaten Murung Raya","Kabupaten Pulang Pisau","Kabupaten Seruyan","Kabupaten Sukamara","Kota Palangka Raya"],
+    "Kalimantan Selatan": ["Kabupaten Balangan","Kabupaten Banjar","Kabupaten Barito Kuala","Kabupaten Hulu Sungai Selatan","Kabupaten Hulu Sungai Tengah","Kabupaten Hulu Sungai Utara","Kabupaten Kota Baru","Kabupaten Tabalong","Kabupaten Tanah Bumbu","Kabupaten Tanah Laut","Kabupaten Tapin","Kota Banjar Baru","Kota Banjarmasin"],
+    "Kalimantan Timur": ["Kabupaten Berau","Kabupaten Kutai Barat","Kabupaten Kutai Kartanegara","Kabupaten Kutai Timur","Kabupaten Mahakam Hulu","Kabupaten Paser","Kabupaten Penajam Paser Utara","Kota Balikpapan","Kota Bontang","Kota Samarinda"],
+    "Kalimantan Utara": ["Kabupaten Bulungan","Kabupaten Malinau","Kabupaten Nunukan","Kabupaten Tana Tidung","Kota Tarakan"],
+    "Sulawesi Utara": ["Kabupaten Bolaang Mongondow","Kabupaten Bolaang Mongondow Selatan","Kabupaten Bolaang Mongondow Timur","Kabupaten Bolaang Mongondow Utara","Kabupaten Kepulauan Sangihe","Kabupaten Kepulauan Talaud","Kabupaten Minahasa","Kabupaten Minahasa Selatan","Kabupaten Minahasa Tenggara","Kabupaten Minahasa Utara","Kabupaten Siau Tagulandang Biaro","Kota Bitung","Kota Kotamobagu","Kota Manado","Kota Tomohon"],
+    "Sulawesi Tengah": ["Kabupaten Banggai","Kabupaten Banggai Kepulauan","Kabupaten Banggai Laut","Kabupaten Buol","Kabupaten Donggala","Kabupaten Morowali","Kabupaten Morowali Utara","Kabupaten Parigi Moutong","Kabupaten Poso","Kabupaten Sigi","Kabupaten Tojo Una-Una","Kabupaten Toli-Toli","Kota Palu"],
+    "Sulawesi Selatan": ["Kabupaten Bantaeng","Kabupaten Barru","Kabupaten Bone","Kabupaten Bulukumba","Kabupaten Enrekang","Kabupaten Gowa","Kabupaten Jeneponto","Kabupaten Kepulauan Selayar","Kabupaten Luwu","Kabupaten Luwu Timur","Kabupaten Luwu Utara","Kabupaten Maros","Kabupaten Pangkajene Dan Kepulauan","Kabupaten Pinrang","Kabupaten Sidenreng Rappang","Kabupaten Sinjai","Kabupaten Soppeng","Kabupaten Takalar","Kabupaten Tana Toraja","Kabupaten Toraja Utara","Kabupaten Wajo","Kota Makassar","Kota Palopo","Kota Pare-Pare"],
+    "Sulawesi Tenggara": ["Kabupaten Bombana","Kabupaten Buton","Kabupaten Buton Selatan","Kabupaten Buton Tengah","Kabupaten Buton Utara","Kabupaten Kolaka","Kabupaten Kolaka Timur","Kabupaten Kolaka Utara","Kabupaten Konawe","Kabupaten Konawe Kepulauan","Kabupaten Konawe Selatan","Kabupaten Konawe Utara","Kabupaten Muna","Kabupaten Muna Barat","Kabupaten Wakatobi","Kota Baubau","Kota Kendari"],
+    "Gorontalo": ["Kabupaten Boalemo","Kabupaten Bone Bolango","Kabupaten Gorontalo","Kabupaten Gorontalo Utara","Kabupaten Pohuwato","Kota Gorontalo"],
+    "Sulawesi Barat": ["Kabupaten Majene","Kabupaten Mamasa","Kabupaten Mamuju","Kabupaten Mamuju Tengah","Kabupaten Mamuju Utara","Kabupaten Polewali Mandar"],
+    "Maluku": ["Kabupaten Buru","Kabupaten Buru Selatan","Kabupaten Kepulauan Aru","Kabupaten Maluku Barat Daya","Kabupaten Maluku Tengah","Kabupaten Maluku Tenggara","Kabupaten Maluku Tenggara Barat","Kabupaten Seram Bagian Barat","Kabupaten Seram Bagian Timur","Kota Ambon","Kota Tual"],
+    "Maluku Utara": ["Kabupaten Halmahera Barat","Kabupaten Halmahera Selatan","Kabupaten Halmahera Tengah","Kabupaten Halmahera Timur","Kabupaten Halmahera Utara","Kabupaten Kepulauan Sula","Kabupaten Pulau Morotai","Kabupaten Pulau Taliabu","Kota Ternate","Kota Tidore Kepulauan"],
+    "Papua": ["Kabupaten Biak Numfor","Kabupaten Jayapura","Kabupaten Keerom","Kabupaten Kepulauan Yapen","Kabupaten Mamberamo Raya","Kabupaten Sarmi","Kabupaten Supiori","Kabupaten Waropen","Kota Jayapura"],
+    "Papua Barat": ["Kabupaten Fakfak","Kabupaten Kaimana","Kabupaten Manokwari","Kabupaten Manokwari Selatan","Kabupaten Pegunungan Arfak","Kabupaten Teluk Bintuni","Kabupaten Teluk Wondama"],
+    "Papua Selatan": ["Kabupaten Asmat","Kabupaten Boven Digoel","Kabupaten Mappi","Kabupaten Merauke"],
+    "Papua Tengah": ["Kabupaten Deiyai","Kabupaten Dogiyai","Kabupaten Intan Jaya","Kabupaten Mimika","Kabupaten Nabire","Kabupaten Paniai","Kabupaten Puncak","Kabupaten Puncak Jaya"],
+    "Papua Pegunungan": ["Kabupaten Jayawijaya","Kabupaten Lanny Jaya","Kabupaten Mamberamo Tengah","Kabupaten Nduga","Kabupaten Pegunungan Bintang","Kabupaten Tolikara","Kabupaten Yahukimo","Kabupaten Yalimo"],
+    "Papua Barat Daya": ["Kabupaten Maybrat","Kabupaten Raja Ampat","Kabupaten Sorong","Kabupaten Sorong Selatan","Kabupaten Tambrauw","Kota Sorong"]
+  };
   var RATING_KUALITATIF = ["Rendah","Menengah-Rendah","Menengah","Menengah-Tinggi","Tinggi"];
   var PERLAKUAN = ["Diterima (Acceptance)","Mitigasi (Mitigation)","Penolakan (Avoidance)","Pembagian (Sharing)"];
   var PRIORITAS = ["Sangat Segera","Segera","Biasa"];
@@ -683,6 +762,30 @@
     sel.appendChild(manualOpt);
     hint.textContent = matches.length + " skenario tersedia dari katalog resmi untuk kategori ini.";
   }
+  function populateKabkotaSelect(provinsi){
+    var sel = $("#kabkota");
+    var hint = $("#kabkota-hint");
+    sel.innerHTML = "";
+    if(!provinsi || !KABKOTA[provinsi]){
+      sel.disabled = true;
+      var ph = document.createElement("option");
+      ph.value=""; ph.textContent="Pilih provinsi dahulu...";
+      sel.appendChild(ph);
+      hint.textContent = "Pilih provinsi dahulu.";
+      return;
+    }
+    sel.disabled = false;
+    var ph2 = document.createElement("option");
+    ph2.value=""; ph2.textContent="Pilih kabupaten/kota...";
+    sel.appendChild(ph2);
+    KABKOTA[provinsi].forEach(function(nama){
+      var o = document.createElement("option");
+      o.value = nama; o.textContent = nama;
+      sel.appendChild(o);
+    });
+    hint.textContent = KABKOTA[provinsi].length + " kabupaten/kota tersedia di " + provinsi + ".";
+  }
+
   function applyIdRiskSelection(){
     var idr = $("#id-risk").value;
     var skenario = $("#skenario");
@@ -826,6 +929,9 @@
   function validateScenario(){
     var errors = [];
     if(!selectedAirport) errors.push("Pilih bandar udara terlebih dahulu.");
+    if(!$("#operator").value) errors.push("Pilih Operator Penerbangan.");
+    if(!$("#provinsi").value) errors.push("Pilih Provinsi.");
+    if(!$("#kabkota").value) errors.push("Pilih Kabupaten/Kota.");
     var kategori = $("#kategori").value;
     if(!kategori) errors.push("Pilih kategori ancaman.");
     var skenario = $("#skenario").value.trim();
@@ -902,6 +1008,9 @@
       bandaraKota: selectedAirport.kota,
       bandaraIata: selectedAirport.iata,
       bandaraKelas: selectedAirport.kelas,
+      provinsi: $("#provinsi").value,
+      kabkota: $("#kabkota").value,
+      operator: $("#operator").value,
       bulan: $("#bulan").value,
       tahun: $("#tahun").value,
       namaPengisi: $("#nama-pengisi").value.trim(),
@@ -1008,19 +1117,39 @@
   }
   var RATING_ORDER = ["Tinggi","Menengah-Tinggi","Menengah","Menengah-Rendah","Rendah"];
 
-  function groupByBandara(results){
+  /* Konfigurasi mode pengelompokan rekap: per Bandara / Operator / Provinsi / Kabupaten-Kota */
+  var GROUP_MODES = {
+    bandara: {
+      label: "Bandara",
+      getKey: function(r){ return r.bandaraId || r.bandaraNama || "?"; },
+      getName: function(r){ return (r.bandaraNama || "Tidak diketahui") + (r.bandaraIata ? (" (" + r.bandaraIata + ")") : ""); }
+    },
+    operator: {
+      label: "Operator Penerbangan",
+      getKey: function(r){ return r.operator || "Tidak diisi"; },
+      getName: function(r){ return r.operator || "Tidak diisi"; }
+    },
+    provinsi: {
+      label: "Provinsi",
+      getKey: function(r){ return r.provinsi || "Tidak diisi"; },
+      getName: function(r){ return r.provinsi || "Tidak diisi"; }
+    },
+    kabkota: {
+      label: "Kabupaten/Kota",
+      getKey: function(r){ return r.kabkota || "Tidak diisi"; },
+      getName: function(r){ return r.kabkota || "Tidak diisi"; }
+    }
+  };
+  var expandedGroupIds = {}; // { "operator::InJourney Airports": true, ... }
+
+  function groupByMode(results, mode){
+    var cfg = GROUP_MODES[mode];
     var groups = {};
     var order = [];
     results.forEach(function(r){
-      var key = r.bandaraId || r.bandaraNama || "?";
+      var key = cfg.getKey(r);
       if(!groups[key]){
-        groups[key] = {
-          bandaraId: key,
-          bandaraNama: r.bandaraNama,
-          bandaraIata: r.bandaraIata,
-          bandaraKota: r.bandaraKota,
-          items: []
-        };
+        groups[key] = { key: key, name: cfg.getName(r), items: [] };
         order.push(key);
       }
       groups[key].items.push(r);
@@ -1028,19 +1157,22 @@
     return order.map(function(k){ return groups[k]; });
   }
 
-  function renderRekapByBandara(results){
+  function renderRekapByGroup(results, mode){
+    var cfg = GROUP_MODES[mode];
+    $("#th-group-name").textContent = cfg.label;
     var filtered = applyFilters(results);
-    var tbody = $("#rekap-bandara-tbody");
+    var tbody = $("#rekap-group-tbody");
     tbody.innerHTML = "";
     if(filtered.length === 0){
       tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Tidak ada data yang cocok.</td></tr>';
       return;
     }
-    var groups = groupByBandara(filtered);
+    var groups = groupByMode(filtered, mode);
     groups.sort(function(a,b){ return b.items.length - a.items.length; });
 
     groups.forEach(function(g){
       g.items.sort(function(a,b){ return (b.savedAt||"").localeCompare(a.savedAt||""); });
+      var groupId = mode + "::" + g.key;
 
       var highest = null;
       g.items.forEach(function(it){
@@ -1052,14 +1184,14 @@
       var counts = {};
       g.items.forEach(function(it){ counts[it.risikoRating] = (counts[it.risikoRating]||0) + 1; });
 
-      var isOpen = !!expandedBandaraIds[g.bandaraId];
+      var isOpen = !!expandedGroupIds[groupId];
 
       var tr = document.createElement("tr");
       tr.className = "bandara-group-row";
-      tr.dataset.bandaraId = g.bandaraId;
+      tr.dataset.groupId = groupId;
 
       var tdName = document.createElement("td");
-      tdName.textContent = (isOpen ? "▾ " : "▸ ") + g.bandaraNama + (g.bandaraIata ? (" (" + g.bandaraIata + ")") : "");
+      tdName.textContent = (isOpen ? "▾ " : "▸ ") + g.name;
       tr.appendChild(tdName);
 
       tr.appendChild(tdText(g.items.length));
@@ -1091,8 +1223,8 @@
       tr.appendChild(tdText(lastSaved));
 
       tr.addEventListener("click", function(){
-        expandedBandaraIds[g.bandaraId] = !expandedBandaraIds[g.bandaraId];
-        renderRekapByBandara(allSubmissionsCache);
+        expandedGroupIds[groupId] = !expandedGroupIds[groupId];
+        renderRekapByGroup(allSubmissionsCache, mode);
       });
       tbody.appendChild(tr);
 
@@ -1110,7 +1242,8 @@
           top.className = "mi-top";
           var kategoriLabel = (it.kategori||"").indexOf(" - ") > -1 ? it.kategori.split(" - ").slice(1).join(" - ") : it.kategori;
           var left = document.createElement("span");
-          left.textContent = kategoriLabel || "-";
+          var prefix = (mode !== "bandara") ? ((it.bandaraNama || "-") + " — ") : "";
+          left.textContent = prefix + (kategoriLabel || "-");
           var right = document.createElement("span");
           right.style.color = bandColor(it.risikoRating);
           right.textContent = (it.risikoNilai != null ? (it.risikoNilai + " · ") : "") + (it.risikoRating || "-");
@@ -1129,17 +1262,83 @@
     });
   }
 
+  /* ---------- Grafik batang per Kategori Ancaman (19 kategori) ---------- */
+  function bandForTotal(total){
+    for(var i=0;i<RISK_BANDS.length;i++){
+      if(total >= RISK_BANDS[i].min && total <= RISK_BANDS[i].max) return RISK_BANDS[i];
+    }
+    return null;
+  }
+  function renderKategoriChart(results){
+    var wrap = $("#kategori-chart-wrap");
+    var legend = $("#kategori-chart-legend");
+    if(!wrap) return;
+
+    var agg = {}; // kode -> {sum, count}
+    results.forEach(function(r){
+      if(r.risikoNilai == null || isNaN(r.risikoNilai)) return;
+      var kode = (r.kategori || "").split(" - ")[0];
+      if(!kode) return;
+      if(!agg[kode]) agg[kode] = {sum:0, count:0};
+      agg[kode].sum += r.risikoNilai;
+      agg[kode].count += 1;
+    });
+
+    var rows = KATEGORI.map(function(k){
+      var kode = k[0], nama = k[1];
+      var a = agg[kode];
+      var avg = a ? (a.sum / a.count) : 0;
+      var count = a ? a.count : 0;
+      return {kode:kode, nama:nama, avg:avg, count:count};
+    });
+
+    var W = 700, labelW = 235, rightW = 95, rowH = 30, padTop = 8, padBottom = 8;
+    var barMaxW = W - labelW - rightW;
+    var H = padTop + rows.length * rowH + padBottom;
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:inherit;">';
+    rows.forEach(function(row, i){
+      var y = padTop + i * rowH;
+      var barY = y + 5;
+      var barH = rowH - 12;
+      var hasData = row.count > 0;
+      var band = hasData ? bandForTotal(Math.round(row.avg)) : null;
+      var color = band ? band.color : "#D9DFE7";
+      var barW = hasData ? Math.max(2, (row.avg / 30) * barMaxW) : 0;
+      var shortName = row.nama.length > 34 ? (row.nama.slice(0,34) + "…") : row.nama;
+
+      svg += '<rect x="' + labelW + '" y="' + barY + '" width="' + barMaxW + '" height="' + barH + '" rx="4" fill="#EEF2F6"></rect>';
+      svg += '<rect x="' + labelW + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" rx="4" fill="' + color + '"></rect>';
+      svg += '<text x="0" y="' + (y + rowH/2 + 4) + '" font-size="10.5" fill="#1B2733" font-weight="700">' + escapeHtml(row.kode) + '</text>';
+      svg += '<text x="26" y="' + (y + rowH/2 + 4) + '" font-size="10" fill="#5C6B7A">' + escapeHtml(shortName) + '</text>';
+      var valText = hasData ? (row.avg.toFixed(1) + " (n=" + row.count + ")") : "belum ada data";
+      svg += '<text x="' + (labelW + barMaxW + 8) + '" y="' + (y + rowH/2 + 4) + '" font-size="10.5" fill="#1B2733" font-weight="' + (hasData ? "700" : "400") + '">' + escapeHtml(valText) + '</text>';
+    });
+    svg += '</svg>';
+    wrap.innerHTML = svg;
+
+    legend.innerHTML = "";
+    RISK_BANDS.forEach(function(b){
+      var item = document.createElement("span");
+      item.style.display = "inline-flex"; item.style.alignItems = "center"; item.style.gap = "5px";
+      var dot = document.createElement("span");
+      dot.style.width = "9px"; dot.style.height = "9px"; dot.style.borderRadius = "999px"; dot.style.background = b.color; dot.style.display = "inline-block";
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(b.label + " (" + b.min + "–" + b.max + ")"));
+      legend.appendChild(item);
+    });
+  }
+
   function renderRekapCurrentMode(){
-    if(rekapViewMode === "bandara"){ renderRekapByBandara(allSubmissionsCache); }
-    else { renderRekapTable(allSubmissionsCache); }
+    if(rekapViewMode === "list"){ renderRekapTable(allSubmissionsCache); }
+    else { renderRekapByGroup(allSubmissionsCache, rekapViewMode); }
   }
 
   function setRekapMode(mode){
     rekapViewMode = mode;
-    $("#btn-mode-list").classList.toggle("active", mode === "list");
-    $("#btn-mode-bandara").classList.toggle("active", mode === "bandara");
+    $("#rekap-view-mode").value = mode;
     $("#rekap-table-list").style.display = mode === "list" ? "" : "none";
-    $("#rekap-table-bandara").style.display = mode === "bandara" ? "" : "none";
+    $("#rekap-table-group").style.display = mode === "list" ? "none" : "";
     renderRekapCurrentMode();
   }
 
@@ -1165,6 +1364,7 @@
       allSubmissionsCache = results;
       renderStats(allSubmissionsCache);
       renderRekapCurrentMode();
+      renderKategoriChart(allSubmissionsCache);
       showToast("Data dimuat: " + allSubmissionsCache.length + " skenario.");
     }).catch(function(err){
       console.error(err);
@@ -1172,45 +1372,15 @@
       showToast("Gagal memuat data.", true);
     });
   }
-  function exportXlsx(){
-    if(typeof XLSX === "undefined"){
-      showToast("Modul ekspor belum siap. Periksa koneksi internet lalu coba lagi.", true);
-      return;
-    }
-    if(!allSubmissionsCache.length){
-      showToast('Belum ada data untuk diekspor. Klik "Muat Ulang" dulu.', true);
-      return;
-    }
-    var rows = allSubmissionsCache.map(function(r){
-      return {
-        "Bandar Udara": r.bandaraNama, "Kota": r.bandaraKota, "IATA": r.bandaraIata, "Kelas": r.bandaraKelas,
-        "Bulan": r.bulan, "Tahun": r.tahun,
-        "Kategori Ancaman": r.kategori, "ID Risk Katalog": r.idRisikoKatalog, "Skenario Ancaman": r.skenario, "Area": r.area,
-        "Langkah Keamanan Saat Ini": r.langkahSaatIni, "Kerentanan Saat Ini": r.kerentananSaatIni,
-        "Ancaman Nilai": r.ancamanNilai, "Ancaman Rating": r.ancamanRating,
-        "Kerentanan Nilai": r.kerentananNilai, "Kerentanan Rating": r.kerentananRating,
-        "Konsekuensi Nilai": r.konsekuensiNilai, "Konsekuensi Rating": r.konsekuensiRating,
-        "Risiko Nilai": r.risikoNilai, "Risiko Rating": r.risikoRating,
-        "Kategori Penerimaan": r.kategoriPenerimaan,
-        "Perlakuan Risiko": r.perlakuan, "Prioritas": r.prioritas,
-        "Langkah Keamanan Tambahan": r.langkahTambahan,
-        "Pemilik Risiko": r.pemilikRisiko, "Tanggal Kaji Ulang": r.tanggalKaji,
-        "Keterangan": r.keterangan,
-        "Nama Pengisi": r.namaPengisi, "Jabatan Pengisi": r.jabatanPengisi,
-        "Link File DPRK": r.linkFileDprk,
-        "Disimpan Pada": r.savedAt
-      };
-    });
-    var ws = XLSX.utils.json_to_sheet(rows);
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data Risiko");
-    var fname = "Rekap_DPRK_" + new Date().toISOString().slice(0,10) + ".xlsx";
-    XLSX.writeFile(wb, fname);
-  }
 
   /* ---------- Init & wiring ---------- */
   function init(){
     fillSimpleSelect($("#bulan"), BULAN, "Pilih bulan...");
+    fillSimpleSelect($("#provinsi"), PROVINSI, "Pilih provinsi...");
+    populateKabkotaSelect(null);
+    $("#provinsi").addEventListener("change", function(){
+      populateKabkotaSelect(this.value);
+    });
     fillKategoriSelect($("#kategori"));
     fillSimpleSelect($("#ancaman-rating"), RATING_KUALITATIF, "Otomatis dari nilai");
     fillSimpleSelect($("#kerentanan-rating"), RATING_KUALITATIF, "Otomatis dari nilai");
@@ -1290,11 +1460,9 @@
     });
 
     $("#btn-refresh-rekap").addEventListener("click", loadRekap);
-    $("#btn-export").addEventListener("click", exportXlsx);
     $("#rekap-filter-text").addEventListener("input", function(){ renderRekapCurrentMode(); });
     $("#rekap-filter-rating").addEventListener("change", function(){ renderRekapCurrentMode(); });
-    $("#btn-mode-list").addEventListener("click", function(){ setRekapMode("list"); });
-    $("#btn-mode-bandara").addEventListener("click", function(){ setRekapMode("bandara"); });
+    $("#rekap-view-mode").addEventListener("change", function(){ setRekapMode(this.value); });
   }
 
   init();
