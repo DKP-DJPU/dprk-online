@@ -527,7 +527,7 @@
 
       <div class="card" id="card-kategori-chart">
         <div class="card-head"><h2>Grafik Penilaian per Kategori Ancaman (19 Kategori)</h2></div>
-        <p class="card-sub" id="kategori-chart-sub">Rata-rata Nilai Risiko (skala 3&ndash;30) dan jumlah skenario per kategori, dari seluruh data yang dimuat.</p>
+        <p class="card-sub" id="kategori-chart-sub">Rata-rata Nilai Risiko (skala 3&ndash;30) dan jumlah operator yang mengisi per kategori, dari seluruh data yang dimuat.</p>
         <div class="rekap-toolbar" id="kategori-chart-toolbar" style="display:none;">
           <select id="kategori-chart-group" style="flex:none;min-width:220px;"></select>
         </div>
@@ -1071,16 +1071,31 @@
   }
 
   /* ---------- Rekap & Ekspor ---------- */
+  // Hitung jumlah operator UNIK (kombinasi bandara + jenis operator) dalam sekumpulan hasil.
+  function countUniqueOperators(results){
+    var set = {};
+    results.forEach(function(r){
+      var key = (r.bandaraId || r.bandaraNama || "?") + "||" + (r.operator || "");
+      set[key] = true;
+    });
+    return Object.keys(set).length;
+  }
+
   function renderStats(results){
     $("#stat-total").textContent = results.length;
-    var opCount = { "Bandar Udara": 0, "AirNav Indonesia (LPPNPI)": 0, "Airlines": 0, "Regulated Agent": 0 };
+    // Hitung jumlah operator UNIK yang sudah mengisi (per bandara + jenis operator),
+    // bukan jumlah baris skenario yang tersimpan.
+    var opSets = { "Bandar Udara": {}, "AirNav Indonesia (LPPNPI)": {}, "Airlines": {}, "Regulated Agent": {} };
     results.forEach(function(r){
-      if(r.operator && opCount.hasOwnProperty(r.operator)) opCount[r.operator]++;
+      if(r.operator && opSets.hasOwnProperty(r.operator)){
+        var key = (r.bandaraId || r.bandaraNama || "?") + "||" + (r.operator || "");
+        opSets[r.operator][key] = true;
+      }
     });
-    $("#stat-op-bandara").textContent = opCount["Bandar Udara"];
-    $("#stat-op-airnav").textContent = opCount["AirNav Indonesia (LPPNPI)"];
-    $("#stat-op-airlines").textContent = opCount["Airlines"];
-    $("#stat-op-ra").textContent = opCount["Regulated Agent"];
+    $("#stat-op-bandara").textContent = Object.keys(opSets["Bandar Udara"]).length;
+    $("#stat-op-airnav").textContent = Object.keys(opSets["AirNav Indonesia (LPPNPI)"]).length;
+    $("#stat-op-airlines").textContent = Object.keys(opSets["Airlines"]).length;
+    $("#stat-op-ra").textContent = Object.keys(opSets["Regulated Agent"]).length;
   }
   function applyFilters(results){
     var q = $("#rekap-filter-text").value.trim().toLowerCase();
@@ -1278,21 +1293,24 @@
     var legend = $("#kategori-chart-legend");
     if(!wrap) return;
 
-    var agg = {}; // kode -> {sum, count}
+    var agg = {}; // kode -> {sum, count, ops:{}}
     results.forEach(function(r){
       if(r.risikoNilai == null || isNaN(r.risikoNilai)) return;
       var kode = (r.kategori || "").split(" - ")[0];
       if(!kode) return;
-      if(!agg[kode]) agg[kode] = {sum:0, count:0};
+      if(!agg[kode]) agg[kode] = {sum:0, count:0, ops:{}};
       agg[kode].sum += r.risikoNilai;
       agg[kode].count += 1;
+      var opKey = (r.bandaraId || r.bandaraNama || "?") + "||" + (r.operator || "");
+      agg[kode].ops[opKey] = true;
     });
 
     var rows = KATEGORI.map(function(k){
       var kode = k[0], nama = k[1];
       var a = agg[kode];
       var avg = a ? (a.sum / a.count) : 0;
-      var count = a ? a.count : 0;
+      // n= jumlah operator unik yang mengisi kategori ini, bukan jumlah baris skenario
+      var count = a ? Object.keys(a.ops).length : 0;
       return {kode:kode, nama:nama, avg:avg, count:count};
     });
 
@@ -1366,12 +1384,12 @@
     sel.innerHTML = "";
     var optAll = document.createElement("option");
     optAll.value = "";
-    optAll.textContent = "Semua " + cfg.label + " (" + filtered.length + ")";
+    optAll.textContent = "Semua " + cfg.label + " (" + countUniqueOperators(filtered) + ")";
     sel.appendChild(optAll);
     groups.forEach(function(g){
       var o = document.createElement("option");
       o.value = g.key;
-      o.textContent = g.name + " (" + g.items.length + ")";
+      o.textContent = g.name + " (" + countUniqueOperators(g.items) + ")";
       sel.appendChild(o);
     });
     sel.value = (prevValue && groups.some(function(g){ return g.key === prevValue; })) ? prevValue : "";
@@ -1389,7 +1407,7 @@
 
   function refreshKategoriChart(){
     var sub = $("#kategori-chart-sub");
-    var baseText = "Rata-rata Nilai Risiko (skala 3\u201330) dan jumlah skenario per kategori";
+    var baseText = "Rata-rata Nilai Risiko (skala 3\u201330) dan jumlah operator yang mengisi per kategori";
     if(rekapViewMode === "list" || !$("#kategori-chart-group").value){
       var suffix = rekapViewMode === "list" ? ", dari seluruh data yang dimuat." :
         (", dari seluruh data (dikelompokkan per " + GROUP_MODES[rekapViewMode].label.toLowerCase() + ").");
