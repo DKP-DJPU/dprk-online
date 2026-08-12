@@ -484,7 +484,7 @@
         <div class="card-head"><h2>Data Terkumpul</h2></div>
         <div class="rekap-toolbar">
           <select id="rekap-view-mode" style="flex:none;min-width:170px;">
-            <option value="list">Daftar Skenario</option>
+            <option value="list">Daftar Skenario Nasional</option>
             <option value="bandara">Rekap per Bandara</option>
             <option value="operator">Rekap per Operator Penerbangan</option>
             <option value="provinsi">Rekap per Provinsi</option>
@@ -526,7 +526,10 @@
 
       <div class="card" id="card-kategori-chart">
         <div class="card-head"><h2>Grafik Penilaian per Kategori Ancaman (19 Kategori)</h2></div>
-        <p class="card-sub">Rata-rata Nilai Risiko (skala 3&ndash;30) dan jumlah skenario per kategori, dari seluruh data yang dimuat.</p>
+        <p class="card-sub" id="kategori-chart-sub">Rata-rata Nilai Risiko (skala 3&ndash;30) dan jumlah skenario per kategori, dari seluruh data yang dimuat.</p>
+        <div class="rekap-toolbar" id="kategori-chart-toolbar" style="display:none;">
+          <select id="kategori-chart-group" style="flex:none;min-width:220px;"></select>
+        </div>
         <div id="kategori-chart-wrap"></div>
         <div id="kategori-chart-legend" style="display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-size:11.5px;color:var(--text-muted);"></div>
       </div>
@@ -1340,6 +1343,63 @@
     $("#rekap-table-list").style.display = mode === "list" ? "" : "none";
     $("#rekap-table-group").style.display = mode === "list" ? "none" : "";
     renderRekapCurrentMode();
+    populateKategoriChartGroupSelect();
+    refreshKategoriChart();
+  }
+
+  /* Grafik kategori ancaman mengikuti mode rekap yang aktif (Bandara/Operator/Provinsi/Kab-Kota) */
+  function populateKategoriChartGroupSelect(){
+    var toolbar = $("#kategori-chart-toolbar");
+    var sel = $("#kategori-chart-group");
+    if(rekapViewMode === "list"){
+      toolbar.style.display = "none";
+      sel.innerHTML = "";
+      return;
+    }
+    var cfg = GROUP_MODES[rekapViewMode];
+    var filtered = applyFilters(allSubmissionsCache);
+    var groups = groupByMode(filtered, rekapViewMode);
+    groups.sort(function(a,b){ return String(a.name).localeCompare(String(b.name), "id"); });
+
+    var prevValue = sel.value;
+    sel.innerHTML = "";
+    var optAll = document.createElement("option");
+    optAll.value = "";
+    optAll.textContent = "Semua " + cfg.label + " (" + filtered.length + ")";
+    sel.appendChild(optAll);
+    groups.forEach(function(g){
+      var o = document.createElement("option");
+      o.value = g.key;
+      o.textContent = g.name + " (" + g.items.length + ")";
+      sel.appendChild(o);
+    });
+    sel.value = (prevValue && groups.some(function(g){ return g.key === prevValue; })) ? prevValue : "";
+    toolbar.style.display = "flex";
+  }
+
+  function getKategoriChartData(){
+    var filtered = applyFilters(allSubmissionsCache);
+    if(rekapViewMode === "list") return filtered;
+    var selVal = $("#kategori-chart-group").value;
+    if(!selVal) return filtered;
+    var cfg = GROUP_MODES[rekapViewMode];
+    return filtered.filter(function(r){ return cfg.getKey(r) === selVal; });
+  }
+
+  function refreshKategoriChart(){
+    var sub = $("#kategori-chart-sub");
+    var baseText = "Rata-rata Nilai Risiko (skala 3\u201330) dan jumlah skenario per kategori";
+    if(rekapViewMode === "list" || !$("#kategori-chart-group").value){
+      var suffix = rekapViewMode === "list" ? ", dari seluruh data yang dimuat." :
+        (", dari seluruh data (dikelompokkan per " + GROUP_MODES[rekapViewMode].label.toLowerCase() + ").");
+      sub.textContent = baseText + suffix;
+    } else {
+      var cfg = GROUP_MODES[rekapViewMode];
+      var opt = $("#kategori-chart-group").selectedOptions[0];
+      var groupName = opt ? opt.textContent.replace(/\s*\(\d+\)$/, "") : "";
+      sub.textContent = baseText + " \u2014 khusus " + cfg.label.toLowerCase() + ": " + groupName + ".";
+    }
+    renderKategoriChart(getKategoriChartData());
   }
 
   function loadRekap(){
@@ -1364,7 +1424,8 @@
       allSubmissionsCache = results;
       renderStats(allSubmissionsCache);
       renderRekapCurrentMode();
-      renderKategoriChart(allSubmissionsCache);
+      populateKategoriChartGroupSelect();
+      refreshKategoriChart();
       showToast("Data dimuat: " + allSubmissionsCache.length + " skenario.");
     }).catch(function(err){
       console.error(err);
@@ -1460,9 +1521,18 @@
     });
 
     $("#btn-refresh-rekap").addEventListener("click", loadRekap);
-    $("#rekap-filter-text").addEventListener("input", function(){ renderRekapCurrentMode(); });
-    $("#rekap-filter-rating").addEventListener("change", function(){ renderRekapCurrentMode(); });
+    $("#rekap-filter-text").addEventListener("input", function(){
+      renderRekapCurrentMode();
+      populateKategoriChartGroupSelect();
+      refreshKategoriChart();
+    });
+    $("#rekap-filter-rating").addEventListener("change", function(){
+      renderRekapCurrentMode();
+      populateKategoriChartGroupSelect();
+      refreshKategoriChart();
+    });
     $("#rekap-view-mode").addEventListener("change", function(){ setRekapMode(this.value); });
+    $("#kategori-chart-group").addEventListener("change", refreshKategoriChart);
   }
 
   init();
