@@ -231,6 +231,23 @@
   .rekap-toolbar select, .rekap-toolbar input{flex:1;min-width:120px;}
   .rekap-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
   table.rekap{border-collapse:collapse;width:100%;font-size:12.5px;min-width:640px;}
+  .rekap-pagination{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    margin-top:10px;font-size:12px;color:var(--text-muted);
+  }
+  .rekap-pagination .rp-size{display:flex;align-items:center;gap:6px;}
+  .rekap-pagination .rp-size select{
+    width:auto;padding:5px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  }
+  .rekap-pagination .rp-nav{display:flex;align-items:center;gap:6px;}
+  .rekap-pagination .rp-nav button{
+    appearance:none;border:1.5px solid var(--border);background:#fff;color:var(--navy-700);
+    border-radius:var(--radius-sm);padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;
+    font-family:var(--font-display);
+  }
+  .rekap-pagination .rp-nav button:hover:not(:disabled){background:var(--navy-100);}
+  .rekap-pagination .rp-nav button:disabled{opacity:.4;cursor:not-allowed;}
+  .rekap-pagination .rp-nav span{font-family:var(--font-mono);}
   table.rekap th{
     background:var(--navy-100);color:var(--navy-900);text-align:left;
     padding:9px 10px;font-weight:700;position:sticky;top:0;white-space:nowrap;
@@ -509,6 +526,22 @@
               <tr><td colspan="7" class="empty-state">Klik &ldquo;Muat Ulang&rdquo; untuk mengambil data.</td></tr>
             </tbody>
           </table>
+          <div class="rekap-pagination" id="rekap-pagination">
+            <div class="rp-size">
+              <span>Tampilkan</span>
+              <select id="rekap-page-size">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+              <span>data / halaman</span>
+            </div>
+            <div class="rp-nav">
+              <button type="button" id="rekap-page-prev">&larr; Sebelumnya</button>
+              <span id="rekap-page-info">Halaman 1 dari 1</span>
+              <button type="button" id="rekap-page-next">Berikutnya &rarr;</button>
+            </div>
+          </div>
         </div>
         <div class="rekap-table-wrap" id="rekap-table-group" style="display:none;">
           <table class="rekap">
@@ -700,6 +733,8 @@
   var sessionEntries = [];
   var allSubmissionsCache = [];
   var rekapViewMode = "list"; // "list" | "bandara"
+  var rekapPage = 1;
+  var rekapPageSize = 10;
   var expandedBandaraIds = {};
 
   /* ---------- Helpers ---------- */
@@ -1110,12 +1145,22 @@
     var filtered = applyFilters(results);
     var tbody = $("#rekap-tbody");
     tbody.innerHTML = "";
+
+    var totalPages = Math.max(1, Math.ceil(filtered.length / rekapPageSize));
+    if(rekapPage > totalPages) rekapPage = totalPages;
+    if(rekapPage < 1) rekapPage = 1;
+
     if(filtered.length === 0){
       tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Tidak ada data yang cocok.</td></tr>';
+      renderRekapPagination(0, totalPages);
       return;
     }
     filtered.sort(function(a,b){ return (b.savedAt||"").localeCompare(a.savedAt||""); });
-    filtered.forEach(function(r){
+
+    var startIdx = (rekapPage - 1) * rekapPageSize;
+    var pageItems = filtered.slice(startIdx, startIdx + rekapPageSize);
+
+    pageItems.forEach(function(r){
       var tr = document.createElement("tr");
       tr.appendChild(tdText(r.bandaraNama + (r.bandaraIata ? (" (" + r.bandaraIata + ")") : "")));
       tr.appendChild(tdText((r.kategori||"").split(" - ")[0]));
@@ -1133,7 +1178,26 @@
       tr.appendChild(tdText(r.savedAt ? new Date(r.savedAt).toLocaleString("id-ID") : "-"));
       tbody.appendChild(tr);
     });
+
+    renderRekapPagination(filtered.length, totalPages);
   }
+
+  function renderRekapPagination(totalItems, totalPages){
+    var info = $("#rekap-page-info");
+    var prevBtn = $("#rekap-page-prev");
+    var nextBtn = $("#rekap-page-next");
+    if(!info || !prevBtn || !nextBtn) return;
+    if(totalItems === 0){
+      info.textContent = "Tidak ada data";
+    } else {
+      var startIdx = (rekapPage - 1) * rekapPageSize + 1;
+      var endIdx = Math.min(rekapPage * rekapPageSize, totalItems);
+      info.textContent = "Halaman " + rekapPage + " dari " + totalPages + " (" + startIdx + "\u2013" + endIdx + " dari " + totalItems + ")";
+    }
+    prevBtn.disabled = rekapPage <= 1;
+    nextBtn.disabled = rekapPage >= totalPages;
+  }
+
   var RATING_ORDER = ["Tinggi","Menengah-Tinggi","Menengah","Menengah-Rendah","Rendah"];
 
   /* Konfigurasi mode pengelompokan rekap: per Bandara / Operator / Provinsi / Kabupaten-Kota */
@@ -1358,6 +1422,7 @@
 
   function setRekapMode(mode){
     rekapViewMode = mode;
+    rekapPage = 1;
     $("#rekap-view-mode").value = mode;
     $("#rekap-table-list").style.display = mode === "list" ? "" : "none";
     $("#rekap-table-group").style.display = mode === "list" ? "none" : "";
@@ -1441,6 +1506,7 @@
         });
       });
       allSubmissionsCache = results;
+      rekapPage = 1;
       renderStats(allSubmissionsCache);
       renderRekapCurrentMode();
       populateKategoriChartGroupSelect();
@@ -1541,17 +1607,33 @@
 
     $("#btn-refresh-rekap").addEventListener("click", loadRekap);
     $("#rekap-filter-text").addEventListener("input", function(){
+      rekapPage = 1;
       renderRekapCurrentMode();
       populateKategoriChartGroupSelect();
       refreshKategoriChart();
     });
     $("#rekap-filter-rating").addEventListener("change", function(){
+      rekapPage = 1;
       renderRekapCurrentMode();
       populateKategoriChartGroupSelect();
       refreshKategoriChart();
     });
     $("#rekap-view-mode").addEventListener("change", function(){ setRekapMode(this.value); });
     $("#kategori-chart-group").addEventListener("change", refreshKategoriChart);
+
+    $("#rekap-page-size").value = String(rekapPageSize);
+    $("#rekap-page-size").addEventListener("change", function(){
+      rekapPageSize = parseInt(this.value, 10) || 10;
+      rekapPage = 1;
+      renderRekapCurrentMode();
+    });
+    $("#rekap-page-prev").addEventListener("click", function(){
+      if(rekapPage > 1){ rekapPage -= 1; renderRekapCurrentMode(); }
+    });
+    $("#rekap-page-next").addEventListener("click", function(){
+      rekapPage += 1;
+      renderRekapCurrentMode();
+    });
   }
 
   init();
