@@ -207,7 +207,7 @@
   .empty-state .es-mark{font-size:26px;margin-bottom:6px;}
 
   /* ---------- Rekap view ---------- */
-  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:16px;}
   .stat-box{
     background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
     padding:14px;text-align:center;box-shadow:var(--shadow);
@@ -264,7 +264,6 @@
   @media (max-width:480px){
     .risk-grid{grid-template-columns:1fr;}
     .field-row{flex-direction:column;gap:0;}
-    .stats-row{grid-template-columns:1fr 1fr;}
   }
 </style>
 </head>
@@ -476,8 +475,10 @@
     <section id="view-rekap" class="view">
       <div class="stats-row">
         <div class="stat-box"><div class="num" id="stat-total">&mdash;</div><div class="lbl">Total Skenario</div></div>
-        <div class="stat-box"><div class="num" id="stat-bandara">&mdash;</div><div class="lbl">Bandara Mengisi</div></div>
-        <div class="stat-box"><div class="num" id="stat-tinggi">&mdash;</div><div class="lbl">Tak Dpt Ditoleransi</div></div>
+        <div class="stat-box"><div class="num" id="stat-op-bandara">&mdash;</div><div class="lbl">Bandar Udara</div></div>
+        <div class="stat-box"><div class="num" id="stat-op-airnav">&mdash;</div><div class="lbl">AirNav Indonesia</div></div>
+        <div class="stat-box"><div class="num" id="stat-op-airlines">&mdash;</div><div class="lbl">Airlines</div></div>
+        <div class="stat-box"><div class="num" id="stat-op-ra">&mdash;</div><div class="lbl">Regulated Agent</div></div>
       </div>
 
       <div class="card">
@@ -485,10 +486,10 @@
         <div class="rekap-toolbar">
           <select id="rekap-view-mode" style="flex:none;min-width:170px;">
             <option value="list">Daftar Skenario Nasional</option>
-            <option value="bandara">Rekap per Bandara</option>
-            <option value="operator">Rekap per Operator Penerbangan</option>
             <option value="provinsi">Rekap per Provinsi</option>
             <option value="kabkota">Rekap per Kabupaten/Kota</option>
+            <option value="operator">Rekap per Operator Penerbangan</option>
+            <option value="bandara">Rekap per Bandara</option>
           </select>
           <input type="text" id="rekap-filter-text" placeholder="Cari bandara / skenario&hellip;">
           <select id="rekap-filter-rating">
@@ -1072,14 +1073,14 @@
   /* ---------- Rekap & Ekspor ---------- */
   function renderStats(results){
     $("#stat-total").textContent = results.length;
-    var bandaraSet = {};
-    var tinggi = 0;
+    var opCount = { "Bandar Udara": 0, "AirNav Indonesia (LPPNPI)": 0, "Airlines": 0, "Regulated Agent": 0 };
     results.forEach(function(r){
-      bandaraSet[r.bandaraId] = true;
-      if(r.risikoRating === "Tinggi" || r.risikoRating === "Menengah-Tinggi") tinggi++;
+      if(r.operator && opCount.hasOwnProperty(r.operator)) opCount[r.operator]++;
     });
-    $("#stat-bandara").textContent = Object.keys(bandaraSet).length;
-    $("#stat-tinggi").textContent = tinggi;
+    $("#stat-op-bandara").textContent = opCount["Bandar Udara"];
+    $("#stat-op-airnav").textContent = opCount["AirNav Indonesia (LPPNPI)"];
+    $("#stat-op-airlines").textContent = opCount["Airlines"];
+    $("#stat-op-ra").textContent = opCount["Regulated Agent"];
   }
   function applyFilters(results){
     var q = $("#rekap-filter-text").value.trim().toLowerCase();
