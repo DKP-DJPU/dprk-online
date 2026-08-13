@@ -525,18 +525,8 @@
         </div>
       </div>
 
-      <div class="card" id="card-sesi">
-        <div class="card-head"><span class="card-step">3</span><h2>Skenario Tersimpan Sesi Ini</h2></div>
-        <div id="session-list">
-          <div class="empty-state">
-            <div class="es-mark">&#128203;</div>
-            Belum ada skenario yang disimpan pada sesi ini.
-          </div>
-        </div>
-      </div>
-
       <div class="card" id="card-riwayat">
-        <div class="card-head"><span class="card-step">4</span><h2>Riwayat Pengisian Saya (perangkat ini)</h2></div>
+        <div class="card-head"><span class="card-step">3</span><h2>Riwayat Pengisian Saya (perangkat ini)</h2></div>
         <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 4px;">
           Salah isi? Klik &ldquo;Edit&rdquo; pada data di bawah untuk mengoreksinya. Riwayat ini tersimpan di perangkat/browser Anda saja &mdash;
           kalau berpindah perangkat, gunakan Kode Referensi yang diberikan setelah menyimpan.
@@ -796,7 +786,6 @@
 
   /* ---------- State ---------- */
   var selectedAirport = null;
-  var sessionEntries = [];
   var allSubmissionsCache = [];
   var rekapViewMode = "list"; // "list" | "bandara"
   var currentEditId = null;
@@ -1237,37 +1226,7 @@
     if(name === "rekap" && allSubmissionsCache.length === 0){ loadRekap(); }
   }
 
-  function addToSessionList(payload){
-    sessionEntries.unshift(payload);
-    renderSessionList();
-  }
-  function renderSessionList(){
-    var wrap = $("#session-list");
-    if(sessionEntries.length === 0){
-      wrap.innerHTML = '<div class="empty-state"><div class="es-mark">&#128203;</div>Belum ada skenario yang disimpan pada sesi ini.</div>';
-      return;
-    }
-    wrap.innerHTML = "";
-    sessionEntries.forEach(function(p){
-      var item = document.createElement("div");
-      item.className = "session-item";
-      var badge = document.createElement("div");
-      badge.className = "session-badge";
-      badge.style.background = bandColor(p.risikoRating);
-      var textWrap = document.createElement("div");
-      var title = document.createElement("div");
-      title.className = "si-title";
-      var kategoriLabel = p.kategori.indexOf(" - ") > -1 ? p.kategori.split(" - ").slice(1).join(" - ") : p.kategori;
-      title.textContent = kategoriLabel;
-      var sub = document.createElement("div");
-      sub.className = "si-sub";
-      var skenarioShort = p.skenario.length > 70 ? (p.skenario.slice(0,70) + "…") : p.skenario;
-      sub.textContent = skenarioShort + "  •  Risiko " + p.risikoNilai + " (" + p.risikoRating + ")";
-      textWrap.appendChild(title); textWrap.appendChild(sub);
-      item.appendChild(badge); item.appendChild(textWrap);
-      wrap.appendChild(item);
-    });
-  }
+
 
   function simpanSkenario(){
     var btn = $("#btn-simpan");
@@ -1335,7 +1294,6 @@
     }).then(function(res){ return res.json(); }).then(function(res){
       if(!res || res.ok !== true){ throw new Error((res && res.error) || "Respon backend tidak valid."); }
       upsertRiwayat(payload);
-      if(!isEdit){ addToSessionList(payload); }
       var refCode = formatRefCode(payload.id, payload.editToken);
       if(isEdit){
         exitEditMode();
