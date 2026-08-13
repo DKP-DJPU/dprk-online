@@ -201,6 +201,43 @@
   }
   .session-item .si-title{font-size:13.5px;font-weight:600;color:var(--navy-900);}
   .session-item .si-sub{font-size:12px;color:var(--text-muted);margin-top:1px;}
+  .session-item .si-actions{flex:none;display:flex;gap:6px;align-items:center;}
+  .session-item .si-btn{
+    appearance:none;border:1.5px solid var(--border);background:#fff;color:var(--navy-700);
+    border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer;
+    font-family:var(--font-display);white-space:nowrap;
+  }
+  .session-item .si-btn:hover{background:var(--navy-100);}
+  .edit-banner{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#FFF6E5;border:1.5px solid #F0C36D;border-radius:var(--radius-sm);
+    padding:10px 14px;margin-bottom:14px;font-size:13px;color:#7A5A0A;
+  }
+  .edit-banner b{color:#5C4406;}
+  .edit-banner button{
+    appearance:none;border:1.5px solid #E3B25A;background:#fff;color:#7A5A0A;
+    border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;
+    font-family:var(--font-display);flex:none;
+  }
+  .edit-banner button:hover{background:#FFF0CE;}
+  .ref-code-box{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    background:var(--bg);border:1px dashed var(--border);border-radius:var(--radius-sm);
+    padding:10px 12px;margin-top:10px;font-size:12.5px;
+  }
+  .ref-code-box code{
+    font-family:var(--font-mono);background:#fff;border:1px solid var(--border);
+    border-radius:6px;padding:4px 8px;font-size:12.5px;color:var(--navy-900);
+  }
+  .ref-code-box button{
+    appearance:none;border:1.5px solid var(--border);background:#fff;color:var(--navy-700);
+    border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer;
+    font-family:var(--font-display);
+  }
+  .ref-code-box button:hover{background:var(--navy-100);}
+  .cari-kode-row{display:flex;gap:8px;margin-top:12px;}
+  .cari-kode-row input{flex:1;font-family:var(--font-mono);font-size:12.5px;}
+  .cari-kode-row button{flex:none;}
   .empty-state{
     text-align:center;padding:26px 12px;color:var(--text-muted);font-size:13px;
   }
@@ -471,9 +508,20 @@
           <textarea id="keterangan" placeholder="Catatan tambahan (opsional)"></textarea>
         </div>
 
+        <div class="edit-banner" id="edit-banner" style="display:none;">
+          <span>&#9998; Anda sedang <b>mengedit</b> skenario yang sudah tersimpan. Perubahan akan menimpa data lama.</span>
+          <button type="button" id="btn-batal-edit">Batal Edit</button>
+        </div>
+
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-simpan" type="button">Simpan Skenario Ini</button>
           <button class="btn btn-ghost" id="btn-reset" type="button">Bersihkan</button>
+        </div>
+
+        <div class="ref-code-box" id="ref-code-box" style="display:none;">
+          <span>&#128274; Kode Referensi (simpan untuk edit nanti):</span>
+          <code id="ref-code-text"></code>
+          <button type="button" id="btn-copy-ref">Salin</button>
         </div>
       </div>
 
@@ -484,6 +532,24 @@
             <div class="es-mark">&#128203;</div>
             Belum ada skenario yang disimpan pada sesi ini.
           </div>
+        </div>
+      </div>
+
+      <div class="card" id="card-riwayat">
+        <div class="card-head"><span class="card-step">4</span><h2>Riwayat Pengisian Saya (perangkat ini)</h2></div>
+        <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 4px;">
+          Salah isi? Klik &ldquo;Edit&rdquo; pada data di bawah untuk mengoreksinya. Riwayat ini tersimpan di perangkat/browser Anda saja &mdash;
+          kalau berpindah perangkat, gunakan Kode Referensi yang diberikan setelah menyimpan.
+        </p>
+        <div id="riwayat-list">
+          <div class="empty-state">
+            <div class="es-mark">&#128193;</div>
+            Belum ada riwayat pengisian di perangkat ini.
+          </div>
+        </div>
+        <div class="cari-kode-row">
+          <input type="text" id="cari-kode-input" placeholder="Punya Kode Referensi dari perangkat lain? Tempel di sini...">
+          <button class="btn btn-ghost btn-sm" id="btn-cari-kode" type="button">Cari &amp; Edit</button>
         </div>
       </div>
     </section>
@@ -733,6 +799,9 @@
   var sessionEntries = [];
   var allSubmissionsCache = [];
   var rekapViewMode = "list"; // "list" | "bandara"
+  var currentEditId = null;
+  var currentEditToken = null;
+  var RIWAYAT_STORAGE_KEY = "dprk_riwayat_pengisian_v1";
   var rekapPage = 1;
   var rekapPageSize = 10;
   var expandedBandaraIds = {};
@@ -999,6 +1068,175 @@
     computeRisiko();
   }
 
+  function genToken(){
+    // Token acak (bukan berurutan) supaya tidak mudah ditebak.
+    var bytes;
+    if(window.crypto && window.crypto.getRandomValues){
+      bytes = new Uint8Array(10);
+      window.crypto.getRandomValues(bytes);
+    } else {
+      bytes = [];
+      for(var i=0;i<10;i++){ bytes.push(Math.floor(Math.random()*256)); }
+    }
+    var hex = Array.prototype.map.call(bytes, function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    return hex.toUpperCase();
+  }
+  function formatRefCode(id, token){
+    return id + "::" + token;
+  }
+  function parseRefCode(code){
+    var idx = code.indexOf("::");
+    if(idx < 0) return null;
+    return { id: code.slice(0, idx).trim(), editToken: code.slice(idx+2).trim() };
+  }
+
+  /* ---------- Riwayat pengisian (localStorage, per perangkat) ---------- */
+  function loadRiwayat(){
+    try {
+      var raw = window.localStorage.getItem(RIWAYAT_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+  }
+  function saveRiwayat(list){
+    try {
+      // Simpan maksimal 100 entri terbaru agar localStorage tidak membengkak.
+      window.localStorage.setItem(RIWAYAT_STORAGE_KEY, JSON.stringify(list.slice(0, 100)));
+    } catch(e){ /* localStorage penuh/nonaktif - abaikan diam-diam */ }
+  }
+  function upsertRiwayat(payload){
+    var list = loadRiwayat();
+    var idx = list.findIndex(function(p){ return p.id === payload.id; });
+    if(idx > -1){ list[idx] = payload; } else { list.unshift(payload); }
+    saveRiwayat(list);
+    renderRiwayatList();
+  }
+  function renderRiwayatList(){
+    var wrap = $("#riwayat-list");
+    var list = loadRiwayat();
+    if(list.length === 0){
+      wrap.innerHTML = '<div class="empty-state"><div class="es-mark">&#128193;</div>Belum ada riwayat pengisian di perangkat ini.</div>';
+      return;
+    }
+    wrap.innerHTML = "";
+    list.forEach(function(p){
+      var item = document.createElement("div");
+      item.className = "session-item";
+      var badge = document.createElement("div");
+      badge.className = "session-badge";
+      badge.style.background = bandColor(p.risikoRating);
+      var textWrap = document.createElement("div");
+      textWrap.style.flex = "1";
+      var title = document.createElement("div");
+      title.className = "si-title";
+      var kategoriLabel = (p.kategori || "").indexOf(" - ") > -1 ? p.kategori.split(" - ").slice(1).join(" - ") : p.kategori;
+      title.textContent = (p.bandaraNama || "-") + " — " + kategoriLabel;
+      var sub = document.createElement("div");
+      sub.className = "si-sub";
+      var skenarioShort = (p.skenario || "").length > 60 ? (p.skenario.slice(0,60) + "…") : p.skenario;
+      sub.textContent = skenarioShort + "  •  Risiko " + p.risikoNilai + " (" + p.risikoRating + ")";
+      textWrap.appendChild(title); textWrap.appendChild(sub);
+      var actions = document.createElement("div");
+      actions.className = "si-actions";
+      var editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "si-btn";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", function(){ enterEditMode(p); });
+      actions.appendChild(editBtn);
+      item.appendChild(badge); item.appendChild(textWrap); item.appendChild(actions);
+      wrap.appendChild(item);
+    });
+  }
+
+  function loadPayloadIntoForm(payload){
+    selectAirport([payload.bandaraId, payload.bandaraNama, payload.bandaraKota, payload.bandaraIata, payload.bandaraKelas]);
+    $("#operator").value = payload.operator || "";
+    $("#provinsi").value = payload.provinsi || "";
+    populateKabkotaSelect(payload.provinsi || "");
+    $("#kabkota").value = payload.kabkota || "";
+    $("#bulan").value = payload.bulan || "";
+    $("#tahun").value = payload.tahun || "";
+    $("#nama-pengisi").value = payload.namaPengisi || "";
+    $("#jabatan-pengisi").value = payload.jabatanPengisi || "";
+    $("#link-file-dprk").value = payload.linkFileDprk || "";
+
+    $("#kategori").value = payload.kategori || "";
+    populateIdRiskSelect(payload.kategori || null);
+    $("#id-risk").value = payload.idRisikoKatalog || MANUAL_VALUE;
+    $("#skenario-mode").textContent = payload.idRisikoKatalog ? "(dari katalog — boleh disesuaikan)" : "(isi manual)";
+    $("#skenario").value = payload.skenario || "";
+    $("#area").value = payload.area || "";
+    $("#langkah-saat-ini").value = payload.langkahSaatIni || "";
+    $("#kerentanan-saat-ini").value = payload.kerentananSaatIni || "";
+
+    $("#ancaman-nilai").value = payload.ancamanNilai || "";
+    updateFaktorRating("ancaman-nilai","ancaman-rating");
+    $("#kerentanan-nilai").value = payload.kerentananNilai || "";
+    updateFaktorRating("kerentanan-nilai","kerentanan-rating");
+    $("#konsekuensi-nilai").value = payload.konsekuensiNilai || "";
+    updateFaktorRating("konsekuensi-nilai","konsekuensi-rating");
+    computeRisiko();
+
+    $("#perlakuan").value = payload.perlakuan || "";
+    $("#prioritas").value = payload.prioritas || "";
+    $("#langkah-tambahan").value = payload.langkahTambahan || "";
+    $("#pemilik-risiko").value = payload.pemilikRisiko || "";
+    $("#tanggal-kaji").value = payload.tanggalKaji || "";
+    $("#keterangan").value = payload.keterangan || "";
+  }
+
+  function enterEditMode(payload){
+    currentEditId = payload.id;
+    currentEditToken = payload.editToken;
+    loadPayloadIntoForm(payload);
+    $("#edit-banner").style.display = "flex";
+    $("#btn-simpan").textContent = "Simpan Perubahan";
+    setView("input");
+    window.scrollTo({top:0, behavior:"smooth"});
+    showToast("Mode edit aktif — ubah data lalu klik \"Simpan Perubahan\".");
+  }
+
+  function exitEditMode(){
+    currentEditId = null;
+    currentEditToken = null;
+    $("#edit-banner").style.display = "none";
+    $("#btn-simpan").textContent = "Simpan Skenario Ini";
+    resetScenarioFields();
+    clearAirport();
+    $("#operator").value = "";
+    $("#provinsi").value = "";
+    populateKabkotaSelect("");
+    $("#bulan").value = "";
+    $("#tahun").value = "";
+  }
+
+  function cariDenganKode(){
+    var raw = $("#cari-kode-input").value.trim();
+    if(!raw){ showToast("Masukkan Kode Referensi terlebih dahulu.", true); return; }
+    var parsed = parseRefCode(raw);
+    if(!parsed){ showToast("Format Kode Referensi tidak dikenali.", true); return; }
+    if(!gasReady()){ showToast("Backend belum dikonfigurasi.", true); return; }
+    var btn = $("#btn-cari-kode");
+    btn.disabled = true; btn.textContent = "Mencari…";
+    var url = GAS_URL + "?action=find&id=" + encodeURIComponent(parsed.id) + "&token=" + encodeURIComponent(parsed.editToken);
+    fetch(url, { method: "GET" }).then(function(res){ return res.json(); }).then(function(res){
+      if(!res || res.ok !== true || !res.data){ throw new Error((res && res.error) || "Data tidak ditemukan / kode salah."); }
+      enterEditMode(res.data);
+      $("#cari-kode-input").value = "";
+    }).catch(function(err){
+      showToast("Gagal: " + (err && err.message ? err.message : "coba lagi"), true);
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = "Cari & Edit";
+    });
+  }
+
+  function setView(name){
+    $all(".tab").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-tab") === name); });
+    $all(".view").forEach(function(v){ v.classList.remove("active"); });
+    $("#view-" + name).classList.add("active");
+    if(name === "rekap" && allSubmissionsCache.length === 0){ loadRekap(); }
+  }
+
   function addToSessionList(payload){
     sessionEntries.unshift(payload);
     renderSessionList();
@@ -1078,11 +1316,14 @@
       keterangan: $("#keterangan").value.trim(),
       savedAt: new Date().toISOString()
     };
-    payload.id = "submission-" + selectedAirport.id + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
+    payload.id = currentEditId || ("submission-" + selectedAirport.id + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,8));
+    payload.editToken = currentEditToken || genToken();
+    var isEdit = !!currentEditId;
+    payload.action = isEdit ? "update" : "create";
 
     if(!gasReady()){
       btn.disabled = false;
-      btn.textContent = "Simpan Skenario Ini";
+      btn.textContent = isEdit ? "Simpan Perubahan" : "Simpan Skenario Ini";
       showToast("Backend Google Sheets belum dikonfigurasi (GAS_URL). Hubungi admin sistem.", true);
       return;
     }
@@ -1093,15 +1334,24 @@
       body: JSON.stringify(payload)
     }).then(function(res){ return res.json(); }).then(function(res){
       if(!res || res.ok !== true){ throw new Error((res && res.error) || "Respon backend tidak valid."); }
-      addToSessionList(payload);
-      resetScenarioFields();
-      showToast("Skenario tersimpan.");
+      upsertRiwayat(payload);
+      if(!isEdit){ addToSessionList(payload); }
+      var refCode = formatRefCode(payload.id, payload.editToken);
+      if(isEdit){
+        exitEditMode();
+        showToast("Perubahan tersimpan.");
+      } else {
+        resetScenarioFields();
+        $("#ref-code-text").textContent = refCode;
+        $("#ref-code-box").style.display = "flex";
+        showToast("Skenario tersimpan.");
+      }
     }).catch(function(err){
       console.error(err);
       showToast("Gagal menyimpan: " + (err && err.message ? err.message : "coba lagi"), true);
     }).finally(function(){
       btn.disabled = false;
-      btn.textContent = "Simpan Skenario Ini";
+      btn.textContent = isEdit ? "Simpan Perubahan" : "Simpan Skenario Ini";
     });
   }
 
@@ -1593,15 +1843,21 @@
 
     $("#btn-simpan").addEventListener("click", simpanSkenario);
     $("#btn-reset").addEventListener("click", function(){ resetScenarioFields(); showToast("Form skenario dibersihkan."); });
+    $("#btn-batal-edit").addEventListener("click", function(){ exitEditMode(); showToast("Mode edit dibatalkan."); });
+    $("#btn-copy-ref").addEventListener("click", function(){
+      var text = $("#ref-code-text").textContent;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){ showToast("Kode Referensi disalin."); });
+      } else {
+        showToast("Salin manual: " + text, true);
+      }
+    });
+    $("#btn-cari-kode").addEventListener("click", cariDenganKode);
+    renderRiwayatList();
 
     $all(".tab").forEach(function(t){
       t.addEventListener("click", function(){
-        $all(".tab").forEach(function(x){ x.classList.remove("active"); });
-        t.classList.add("active");
-        var name = t.getAttribute("data-tab");
-        $all(".view").forEach(function(v){ v.classList.remove("active"); });
-        $("#view-" + name).classList.add("active");
-        if(name === "rekap" && allSubmissionsCache.length === 0){ loadRekap(); }
+        setView(t.getAttribute("data-tab"));
       });
     });
 
